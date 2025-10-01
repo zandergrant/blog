@@ -1,137 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Zander Grant — Writing on Centeredness, Clarity, and Motion</title>
-  <meta name="description" content="Thoughtful, research-informed writing on centeredness, intentional living, and running in motion." />
-
-  <!-- Open Graph / Twitter -->
-  <meta property="og:title" content="Zander Grant — Writing" />
-  <meta property="og:description" content="Thoughtful, research-informed writing on centeredness, intentional living, and running." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://zandergrant.github.io/blog" />
-  <meta name="twitter:card" content="summary_large_image" />
-
-  <!-- Optional favicon -->
-  <!-- <link rel="icon" href="/favicon.ico"> -->
-
-  <style>
-    :root{
-      --bg: #ffffff;
-      --text: #0f172a;     /* slate-900 */
-      --muted:#475569;     /* slate-600 */
-      --ring:#0ea5e9;      /* sky-500 */
-      --card:#f8fafc;      /* slate-50 */
-      --link:#0f766e;      /* teal-700 */
-      --maxw: 760px;
-      --radius: 16px;
-      --pad: clamp(16px, 2.5vw, 28px);
-    }
-    @media (prefers-color-scheme: dark){
-      :root{
-        --bg:#0b1220;
-        --text:#e5e7eb;
-        --muted:#94a3b8;
-        --card:#0f172a;
-        --link:#22d3ee;
-      }
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;}
-    a{color:var(--link);text-decoration:none}
-    a:hover{opacity:.9;text-decoration:underline}
-    .wrap{max-width:var(--maxw);margin:0 auto;padding:0 var(--pad)}
-    header{position:sticky;top:0;background:rgba(255,255,255,.7);backdrop-filter:saturate(180%) blur(12px);border-bottom:1px solid rgba(100,116,139,.15)}
-    @media (prefers-color-scheme: dark){header{background:rgba(11,18,32,.6);border-color:rgba(148,163,184,.15)}}
-    .nav{display:flex;align-items:center;justify-content:space-between;height:64px}
-    .brand{font-weight:700;letter-spacing:.2px}
-    .menu{display:flex;gap:18px}
-    .btn{display:inline-block;background:var(--text);color:var(--bg);padding:10px 14px;border-radius:999px;transition:transform .08s ease}
-    .btn:hover{transform:translateY(-1px)}
-    .hero{padding:calc(var(--pad)*2) 0}
-    .hero h1{font-size:clamp(30px,5vw,48px);line-height:1.1;margin:0 0 8px 0}
-    .hero p{color:var(--muted);max-width:60ch;margin:8px 0 18px 0}
-    .grid{display:grid;grid-template-columns:1fr;gap:18px}
-    section{padding:26px 0}
-    .card{background:var(--card);border:1px solid rgba(100,116,139,.15);border-radius:var(--radius);padding:20px}
-    h2{font-size:clamp(22px,3.2vw,30px);margin:0 0 8px 0}
-    .list{list-style:none;margin:0;padding:0}
-    .post{padding:14px 0;border-bottom:1px solid rgba(100,116,139,.15)}
-    .post:last-child{border-bottom:none}
-    .post a.title{font-weight:650}
-    .post .meta{color:var(--muted);font-size:14px}
-    footer{padding:40px 0;color:var(--muted);border-top:1px solid rgba(100,116,139,.15);margin-top:20px}
-    .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--card);border:1px solid rgba(100,116,139,.25);padding:2px 6px;border-radius:8px}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Skincare Brand</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
-
 <body>
-  <header>
-    <div class="wrap nav">
-      <div class="brand">Zander Grant</div>
-      <nav class="menu">
-        <a href="#writing">Writing</a>
-        <a href="#about">About</a>
-        <a class="btn" href="#newsletter">Subscribe</a>
-      </nav>
-    </div>
-  </header>
 
-  <main class="wrap">
-    <section class="hero">
-      <h1>Ideas for a calmer, more intentional life.</h1>
-      <p>I write short, grounded essays on centeredness, mental clarity, and movement. No fluff, no hacks — just research-informed notes you can actually use.</p>
-      <a class="btn" href="#writing">Read the latest</a>
-    </section>
+    <header class="navbar">
+        <div class="container">
+            <a href="#" class="logo">SKINCARE</a>
+            <nav>
+                <ul>
+                    <li><a href="#">Shop</a></li>
+                    <li><a href="#">About</a></li>
+                    <li><a href="#">Contact</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
 
-    <section id="writing">
-      <h2>Latest writing</h2>
-      <ul class="list">
-        <!-- Duplicate/replace these list items as you publish posts -->
-        <li class="post">
-          <a class="title" href="posts/return-to-center.html">Return to Center (When Work Pulls You Sideways)</a>
-          <div class="meta">5 min • research-backed practice</div>
-        </li>
-        <li class="post">
-          <a class="title" href="posts/boredom-as-training.html">Boredom as Training for Attention</a>
-          <div class="meta">6 min • attention & nervous system</div>
-        </li>
-        <li class="post">
-          <a class="title" href="posts/running-in-motion.html">Running, But Not to Win</a>
-          <div class="meta">4 min • belonging in motion</div>
-        </li>
-      </ul>
-    </section>
+    <main>
+        <section class="hero">
+            <div class="container">
+                <h1>Radiant Skin Starts Here.</h1>
+                <p>Clean, effective, and personalized skincare for your daily routine.</p>
+                <a href="#" class="cta-button">Shop Best Sellers</a>
+            </div>
+        </section>
 
-    <section id="newsletter">
-      <div class="card">
-        <h2>Get new essays via email</h2>
-        <p class="muted">No spam. Just occasional notes worth keeping.</p>
-        <!-- Replace this with your actual provider link (Beehiiv/Substack/ConvertKit) -->
-        <a class="btn" href="https://www.substack.com/" target="_blank" rel="noopener">Subscribe</a>
-        <p style="margin-top:10px;color:var(--muted);font-size:14px">
-          Since GitHub Pages is static, the subscribe button links to an external service.
-        </p>
-      </div>
-    </section>
+        <section class="products">
+            <div class="container">
+                <h2>Featured Products</h2>
+                <div class="product-grid">
+                    <div class="product-card">
+                        <img src="https://via.placeholder.com/300x300" alt="Cleanser">
+                        <h3>Gentle Cleanser</h3>
+                        <p class="price">$28.00</p>
+                        <button>Add to Cart</button>
+                    </div>
 
-    <section id="about">
-      <h2>About</h2>
-      <p>I’m Zander — runner, systems-thinker, and builder of <span class="kbd">Little More Centered</span>. I write to make sense of a busy world and help you design days that feel steadier and more alive.</p>
-      <p>Elsewhere: <a href="https://instagram.com" target="_blank" rel="noopener">Instagram</a> · <a href="https://x.com" target="_blank" rel="noopener">X</a> · <a href="mailto:hello@example.com">Email</a></p>
-    </section>
-  </main>
+                    <div class="product-card">
+                        <img src="https://via.placeholder.com/300x300" alt="Serum">
+                        <h3>Hydrating Serum</h3>
+                        <p class="price">$45.00</p>
+                        <button>Add to Cart</button>
+                    </div>
 
-  <footer>
-    <div class="wrap">
-      © <span id="y"></span> Zander Grant
-    </div>
-  </footer>
+                    <div class="product-card">
+                        <img src="https://via.placeholder.com/300x300" alt="Moisturizer">
+                        <h3>Daily Moisturizer</h3>
+                        <p class="price">$35.00</p>
+                        <button>Add to Cart</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
 
-  <script>
-    // current year
-    document.getElementById('y').textContent = new Date().getFullYear();
-  </script>
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; 2025 Your Skincare Brand. All Rights Reserved.</p>
+        </div>
+    </footer>
+
 </body>
 </html>
