@@ -1,0 +1,288 @@
+import React, { useState } from 'react';
+import { Upload, TrendingUp, Brain, Sparkles, BarChart3 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+
+const ClarityEngine = () => {
+  const [text, setText] = useState('');
+  const [analysis, setAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const analyzeText = () => {
+    if (!text.trim()) return;
+    
+    setIsAnalyzing(true);
+    
+    setTimeout(() => {
+      const words = text.toLowerCase().split(/\s+/);
+      const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+      
+      // Sentiment Analysis
+      const positiveWords = ['good', 'great', 'happy', 'love', 'excellent', 'amazing', 'wonderful', 'grateful', 'joy', 'peace', 'calm', 'centered', 'clear', 'focused', 'productive', 'inspired', 'motivated', 'accomplished', 'proud', 'satisfied', 'content'];
+      const negativeWords = ['bad', 'hate', 'angry', 'sad', 'terrible', 'awful', 'anxious', 'stressed', 'worried', 'overwhelmed', 'frustrated', 'stuck', 'lost', 'confused', 'tired', 'exhausted', 'scattered', 'unfocused'];
+      const neutralWords = ['okay', 'fine', 'alright', 'normal', 'usual'];
+      
+      let positiveCount = 0;
+      let negativeCount = 0;
+      let neutralCount = 0;
+      
+      words.forEach(word => {
+        if (positiveWords.includes(word)) positiveCount++;
+        if (negativeWords.includes(word)) negativeCount++;
+        if (neutralWords.includes(word)) neutralCount++;
+      });
+      
+      const totalSentiment = positiveCount + negativeCount + neutralCount || 1;
+      const sentimentScore = ((positiveCount - negativeCount) / words.length * 100 + 50).toFixed(1);
+      
+      // Theme Detection
+      const themes = {
+        'Work & Productivity': ['work', 'project', 'meeting', 'deadline', 'task', 'focus', 'productive', 'accomplish'],
+        'Relationships': ['friend', 'family', 'partner', 'conversation', 'connect', 'alone', 'together'],
+        'Self-Reflection': ['feel', 'think', 'realize', 'understand', 'notice', 'aware', 'reflect', 'consider'],
+        'Health & Wellness': ['exercise', 'run', 'sleep', 'eat', 'tired', 'energy', 'health', 'body'],
+        'Growth & Learning': ['learn', 'grow', 'improve', 'change', 'develop', 'practice', 'try', 'experiment']
+      };
+      
+      const themeScores = {};
+      Object.keys(themes).forEach(theme => {
+        const count = words.filter(word => themes[theme].includes(word)).length;
+        themeScores[theme] = count;
+      });
+      
+      const topThemes = Object.entries(themeScores)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .filter(([_, count]) => count > 0)
+        .map(([theme]) => theme);
+      
+      // Clarity Score (based on sentence structure and word variety)
+      const avgWordsPerSentence = words.length / sentences.length;
+      const uniqueWords = new Set(words).size;
+      const lexicalDiversity = (uniqueWords / words.length * 100).toFixed(1);
+      
+      let clarityScore = 50;
+      if (avgWordsPerSentence > 10 && avgWordsPerSentence < 25) clarityScore += 20;
+      if (lexicalDiversity > 60) clarityScore += 15;
+      if (sentences.length > 3) clarityScore += 15;
+      clarityScore = Math.min(clarityScore, 100);
+      
+      // Word Frequency
+      const wordFreq = {};
+      words.forEach(word => {
+        if (word.length > 4 && !['should', 'would', 'could', 'there', 'their', 'about', 'other'].includes(word)) {
+          wordFreq[word] = (wordFreq[word] || 0) + 1;
+        }
+      });
+      
+      const topWords = Object.entries(wordFreq)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([word, count]) => ({ word, count }));
+      
+      // Emotional Pattern
+      const emotionalPatterns = [
+        { emotion: 'Positive', value: (positiveCount / totalSentiment * 100).toFixed(0) },
+        { emotion: 'Negative', value: (negativeCount / totalSentiment * 100).toFixed(0) },
+        { emotion: 'Neutral', value: (neutralCount / totalSentiment * 100).toFixed(0) }
+      ];
+      
+      // Cognitive Metrics for Radar
+      const cognitiveMetrics = [
+        { metric: 'Clarity', value: clarityScore },
+        { metric: 'Emotional Awareness', value: Math.min((positiveCount + negativeCount) / words.length * 500, 100) },
+        { metric: 'Lexical Richness', value: parseFloat(lexicalDiversity) },
+        { metric: 'Reflection Depth', value: Math.min(sentences.length * 15, 100) },
+        { metric: 'Sentiment Balance', value: 100 - Math.abs(50 - parseFloat(sentimentScore)) * 2 }
+      ];
+      
+      setAnalysis({
+        sentimentScore,
+        clarityScore,
+        lexicalDiversity,
+        topThemes,
+        topWords,
+        emotionalPatterns,
+        cognitiveMetrics,
+        wordCount: words.length,
+        sentenceCount: sentences.length
+      });
+      
+      setIsAnalyzing(false);
+    }, 800);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-stone-100 p-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-12 mt-8">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Brain className="w-10 h-10 text-slate-700" />
+            <h1 className="text-4xl font-light text-slate-800 tracking-tight">Clarity Engine</h1>
+          </div>
+          <p className="text-slate-600 text-lg font-light max-w-2xl mx-auto">
+            Surface patterns in your reflections. Track emotional signals. Measure clarity over time.
+          </p>
+        </div>
+
+        {/* Input Section */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-slate-500" />
+            <h2 className="text-xl font-light text-slate-700">Your Reflection</h2>
+          </div>
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Paste your journal entry, voice note transcription, or any reflective writing here..."
+            className="w-full h-48 p-4 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-300 text-slate-700 resize-none font-light"
+          />
+          <div className="flex justify-between items-center mt-4">
+            <span className="text-sm text-slate-500 font-light">
+              {text.split(/\s+/).filter(w => w).length} words
+            </span>
+            <button
+              onClick={analyzeText}
+              disabled={!text.trim() || isAnalyzing}
+              className="px-6 py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors font-light flex items-center gap-2"
+            >
+              {isAnalyzing ? (
+                <>Processing...</>
+              ) : (
+                <>
+                  <TrendingUp className="w-4 h-4" />
+                  Analyze
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Analysis Results */}
+        {analysis && (
+          <div className="space-y-6">
+            {/* Key Metrics */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div className="text-sm text-slate-500 mb-2 font-light">Clarity Score</div>
+                <div className="text-4xl font-light text-slate-800 mb-2">{analysis.clarityScore}</div>
+                <div className="text-xs text-slate-500 font-light">
+                  Based on structure & coherence
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div className="text-sm text-slate-500 mb-2 font-light">Sentiment</div>
+                <div className="text-4xl font-light text-slate-800 mb-2">{analysis.sentimentScore}</div>
+                <div className="text-xs text-slate-500 font-light">
+                  {parseFloat(analysis.sentimentScore) > 60 ? 'Predominantly positive' : 
+                   parseFloat(analysis.sentimentScore) < 40 ? 'Predominantly negative' : 'Balanced'}
+                </div>
+              </div>
+              
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <div className="text-sm text-slate-500 mb-2 font-light">Lexical Diversity</div>
+                <div className="text-4xl font-light text-slate-800 mb-2">{analysis.lexicalDiversity}%</div>
+                <div className="text-xs text-slate-500 font-light">
+                  Vocabulary richness
+                </div>
+              </div>
+            </div>
+
+            {/* Cognitive Profile Radar */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+              <div className="flex items-center gap-2 mb-6">
+                <BarChart3 className="w-5 h-5 text-slate-500" />
+                <h3 className="text-xl font-light text-slate-700">Cognitive Profile</h3>
+              </div>
+              <ResponsiveContainer width="100%" height={300}>
+                <RadarChart data={analysis.cognitiveMetrics}>
+                  <PolarGrid stroke="#e2e8f0" />
+                  <PolarAngleAxis dataKey="metric" tick={{ fill: '#64748b', fontSize: 12 }} />
+                  <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 11 }} />
+                  <Radar name="Score" dataKey="value" stroke="#334155" fill="#334155" fillOpacity={0.2} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Themes & Patterns */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Top Themes */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <h3 className="text-lg font-light text-slate-700 mb-4">Dominant Themes</h3>
+                {analysis.topThemes.length > 0 ? (
+                  <div className="space-y-2">
+                    {analysis.topThemes.map((theme, idx) => (
+                      <div key={idx} className="flex items-center gap-3">
+                        <div className="w-2 h-2 bg-slate-700 rounded-full"></div>
+                        <span className="text-slate-600 font-light">{theme}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-400 font-light">No clear themes detected</p>
+                )}
+              </div>
+
+              {/* Emotional Pattern */}
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+                <h3 className="text-lg font-light text-slate-700 mb-4">Emotional Signature</h3>
+                <ResponsiveContainer width="100%" height={150}>
+                  <BarChart data={analysis.emotionalPatterns} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                    <XAxis type="number" domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 11 }} />
+                    <YAxis dataKey="emotion" type="category" tick={{ fill: '#64748b', fontSize: 12 }} width={80} />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="#334155" radius={[0, 8, 8, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Word Frequency */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+              <h3 className="text-lg font-light text-slate-700 mb-6">Recurring Words</h3>
+              <ResponsiveContainer width="100%" height={250}>
+                <BarChart data={analysis.topWords}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="word" tick={{ fill: '#64748b', fontSize: 11 }} />
+                  <YAxis tick={{ fill: '#64748b', fontSize: 11 }} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#334155" radius={[8, 8, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Insights */}
+            <div className="bg-slate-800 text-slate-100 rounded-2xl shadow-sm p-8">
+              <h3 className="text-lg font-light mb-4">Reflection Insights</h3>
+              <div className="space-y-3 text-sm font-light leading-relaxed">
+                <p>
+                  Your reflection contains {analysis.wordCount} words across {analysis.sentenceCount} sentences. 
+                  The clarity score of {analysis.clarityScore} suggests {parseFloat(analysis.clarityScore) > 70 ? 'well-structured, coherent thinking' : 'room for deeper organization'}.
+                </p>
+                <p>
+                  With {analysis.lexicalDiversity}% lexical diversity, your vocabulary is {parseFloat(analysis.lexicalDiversity) > 60 ? 'rich and varied' : 'focused on core themes'}.
+                </p>
+                {analysis.topThemes.length > 0 && (
+                  <p>
+                    Primary focus areas: {analysis.topThemes.join(', ')}. These patterns reveal where your attention naturally gravitates.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="text-center mt-12 pb-8">
+          <p className="text-slate-500 text-sm font-light">
+            All processing happens client-side. Your reflections never leave your browser.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default ClarityEngine;
