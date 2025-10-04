@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lacrosse Trainer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * {
             margin: 0;
@@ -28,6 +29,13 @@
             font-size: 34px;
             font-weight: 700;
             margin-bottom: 8px;
+        }
+
+        h2 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #000;
         }
 
         .subtitle {
@@ -73,6 +81,16 @@
             width: auto;
         }
 
+        .btn-danger {
+            background: #ff3b30;
+            color: #fff;
+        }
+
+        .btn-success {
+            background: #34c759;
+            color: #fff;
+        }
+
         .input {
             width: 100%;
             padding: 12px;
@@ -105,35 +123,41 @@
             margin-bottom: 4px;
         }
 
-        .athlete-email {
-            font-size: 15px;
-            color: #8e8e93;
-        }
-
         .exercise-block {
             padding-bottom: 20px;
             margin-bottom: 20px;
             border-bottom: 1px solid #f2f2f7;
         }
 
-        .exercise-name {
+        .exercise-name-input {
             font-size: 17px;
             font-weight: 600;
             margin-bottom: 12px;
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #e5e5ea;
         }
 
-        .exercise-inputs {
+        .set-row {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr 40px;
             gap: 8px;
             margin-bottom: 8px;
         }
 
-        .input-group label {
+        .set-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 40px;
+            gap: 8px;
+            margin-bottom: 8px;
             font-size: 13px;
             color: #8e8e93;
-            display: block;
-            margin-bottom: 4px;
+            font-weight: 600;
+        }
+
+        .input-group {
+            position: relative;
         }
 
         .input-group input {
@@ -142,6 +166,28 @@
             border-radius: 8px;
             border: 1px solid #e5e5ea;
             font-size: 17px;
+        }
+
+        .remove-set-btn {
+            background: #ff3b30;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0;
+            height: 40px;
+        }
+
+        .add-set-btn {
+            background: #34c759;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 15px;
+            cursor: pointer;
+            margin-top: 8px;
         }
 
         textarea {
@@ -153,6 +199,7 @@
             min-height: 60px;
             resize: vertical;
             font-family: inherit;
+            margin-top: 8px;
         }
 
         .back-btn {
@@ -177,6 +224,9 @@
             color: #007aff;
             width: 100%;
             text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
         .workout-option:hover {
@@ -226,6 +276,48 @@
             border-radius: 8px;
             margin-bottom: 12px;
         }
+
+        .date-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+
+        .date-selector input {
+            flex: 1;
+            max-width: 200px;
+        }
+
+        .template-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            justify-content: flex-end;
+        }
+
+        .chart-controls button {
+            padding: 8px 16px;
+            border: 1px solid #007aff;
+            background: white;
+            color: #007aff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .chart-controls button.active {
+            background: #007aff;
+            color: white;
+        }
+
+        canvas {
+            max-height: 300px;
+        }
     </style>
 </head>
 <body>
@@ -266,7 +358,6 @@
                 <h1>Add Athlete</h1>
                 <div class="card">
                     <input type="text" id="athleteName" class="input" placeholder="Athlete Name">
-                    <input type="email" id="athleteEmail" class="input" placeholder="Athlete Email">
                     <button onclick="addAthlete()" class="btn">Add Athlete</button>
                 </div>
             </div>
@@ -277,38 +368,70 @@
             <div class="container">
                 <button onclick="showAthletesView()" class="back-btn">← Athletes</button>
                 <h1 id="athleteNameTitle"></h1>
-                <input type="date" id="dateInput" class="input" style="max-width: 200px; margin-bottom: 24px;">
+                
+                <!-- Progress Chart -->
+                <div class="card">
+                    <h2>Progress</h2>
+                    <div class="chart-controls">
+                        <button onclick="updateChartRange('7')" class="active" id="btn7">7 Days</button>
+                        <button onclick="updateChartRange('30')" id="btn30">30 Days</button>
+                        <button onclick="updateChartRange('90')" id="btn90">90 Days</button>
+                        <button onclick="updateChartRange('all')" id="btnAll">All Time</button>
+                    </div>
+                    <canvas id="progressChart"></canvas>
+                </div>
+
+                <div class="date-selector">
+                    <input type="date" id="dateInput" class="input">
+                    <button onclick="loadWorkoutForDate()" class="btn btn-small">View</button>
+                </div>
                 
                 <!-- Workout Selection -->
                 <div id="workoutSelection">
-                    <h2 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">Select Workout</h2>
+                    <h2>Select a Workout</h2>
+                    <button onclick="selectNewWorkout()" class="workout-option">
+                        <span>📝 New Workout</span>
+                    </button>
+                    <button onclick="selectRestDay()" class="workout-option">
+                        <span>😴 Rest Day</span>
+                    </button>
+
+                    <h2 style="margin-top: 24px;">Templates</h2>
                     <div id="workoutTemplates"></div>
+                    <button onclick="showAddTemplate()" class="btn btn-secondary" style="margin-top: 12px;">+ Add New Template</button>
                 </div>
 
                 <!-- Workout Log -->
                 <div id="workoutLog" class="hidden">
                     <div class="card">
-                        <h2 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;" id="workoutTitle"></h2>
+                        <input type="text" id="workoutNameInput" class="input" placeholder="Workout Name" style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
                         <div id="exercisesList"></div>
+                        <button onclick="addExercise()" class="btn btn-secondary" style="margin-bottom: 12px;">+ Add Exercise</button>
                         <button onclick="saveWorkout()" class="btn">Save Workout</button>
-                        <button onclick="clearWorkout()" class="btn btn-secondary" style="margin-top: 12px;">Select Different Workout</button>
+                        <button onclick="clearWorkout()" class="btn btn-secondary" style="margin-top: 12px;">Cancel</button>
                     </div>
                 </div>
 
                 <!-- AI Review Section -->
                 <div class="card">
-                    <div class="header-flex">
-                        <h2 style="font-size: 22px; font-weight: 600; margin: 0;">AI Review</h2>
-                        <button onclick="togglePromptEditor()" class="btn btn-small btn-secondary">Edit Prompt</button>
-                    </div>
-                    
-                    <div id="promptEditor" class="hidden" style="margin: 16px 0;">
-                        <textarea id="aiPromptText" style="min-height: 120px; margin-bottom: 8px;"></textarea>
-                        <button onclick="savePrompt()" class="btn" style="background: #34c759;">Save Prompt</button>
-                    </div>
-
-                    <button onclick="generateAIReview()" class="btn" style="margin-top: 16px;">Generate AI Review</button>
+                    <h2>AI Review</h2>
+                    <button onclick="generateAIReview()" class="btn">Generate AI Review</button>
                     <div id="aiReviewContent" style="margin-top: 16px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Template Editor -->
+        <div id="templateEditor" class="hidden">
+            <div class="container">
+                <button onclick="cancelTemplateEdit()" class="back-btn">← Back</button>
+                <h1 id="templateEditorTitle">New Template</h1>
+                <div class="card">
+                    <input type="text" id="templateNameInput" class="input" placeholder="Template Name">
+                    <div id="templateExercisesList"></div>
+                    <button onclick="addTemplateExercise()" class="btn btn-secondary" style="margin-bottom: 12px;">+ Add Exercise</button>
+                    <button onclick="saveTemplate()" class="btn">Save Template</button>
+                    <button onclick="deleteTemplate()" class="btn btn-danger" id="deleteTemplateBtn" style="margin-top: 12px;">Delete Template</button>
                 </div>
             </div>
         </div>
@@ -318,9 +441,9 @@
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, doc, setDoc, getDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, doc, setDoc, getDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-        // Firebase Configuration - COMPLETE WITH YOUR CREDENTIALS
+        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBf9M5uvWGnspLTY-I9bx15JascZVEdMAg",
             authDomain: "trainer-1983d.firebaseapp.com",
@@ -338,6 +461,11 @@
         window.currentUser = null;
         window.selectedAthlete = null;
         window.currentWorkoutLog = null;
+        window.currentTemplate = null;
+        window.chartRange = '7';
+        window.progressChart = null;
+        
+        // AI Prompt - EDIT THIS AS THE CODER
         window.aiPrompt = "Analyze this athlete's performance based on their workout logs. Include: 1) Total workouts completed, 2) Weight progression trends, 3) Summary of their notes/comments, 4) Specific suggestions for improvement. Keep it concise and motivating.";
         
         // Gemini API Key
@@ -349,7 +477,6 @@
                 window.currentUser = user;
                 document.getElementById('authSection').classList.add('hidden');
                 document.getElementById('appSection').classList.remove('hidden');
-                await loadAIPrompt();
                 showAthletesView();
             } else {
                 window.currentUser = null;
@@ -358,7 +485,6 @@
             }
         });
 
-        // Make functions available globally
         window.signIn = async () => {
             const email = document.getElementById('emailInput').value;
             const password = document.getElementById('passwordInput').value;
@@ -384,6 +510,7 @@
             document.getElementById('athletesView').classList.remove('hidden');
             document.getElementById('addAthleteView').classList.add('hidden');
             document.getElementById('workoutView').classList.add('hidden');
+            document.getElementById('templateEditor').classList.add('hidden');
             await loadAthletes();
         };
 
@@ -394,22 +521,19 @@
 
         window.addAthlete = async () => {
             const name = document.getElementById('athleteName').value;
-            const email = document.getElementById('athleteEmail').value;
             
-            if (!name || !email) {
-                alert('Please fill in all fields');
+            if (!name) {
+                alert('Please enter athlete name');
                 return;
             }
 
             try {
                 await addDoc(collection(window.db, 'athletes'), {
                     name,
-                    email,
                     userId: window.currentUser.uid,
                     createdAt: new Date()
                 });
                 document.getElementById('athleteName').value = '';
-                document.getElementById('athleteEmail').value = '';
                 showAthletesView();
             } catch (error) {
                 alert('Error adding athlete: ' + error.message);
@@ -434,10 +558,7 @@
                     const athlete = { id: doc.id, ...doc.data() };
                     const btn = document.createElement('button');
                     btn.className = 'athlete-item';
-                    btn.innerHTML = `
-                        <div class="athlete-name">${athlete.name}</div>
-                        <div class="athlete-email">${athlete.email}</div>
-                    `;
+                    btn.innerHTML = `<div class="athlete-name">${athlete.name}</div>`;
                     btn.onclick = () => selectAthlete(athlete);
                     athletesList.appendChild(btn);
                 });
@@ -454,56 +575,159 @@
             document.getElementById('workoutView').classList.remove('hidden');
             await loadWorkoutTemplates();
             await loadWorkoutForDate();
+            await loadProgressChart();
+        };
+
+        window.loadProgressChart = async () => {
+            try {
+                const q = query(
+                    collection(window.db, 'workoutLogs'),
+                    where('athleteId', '==', window.selectedAthlete.id),
+                    orderBy('date', 'asc')
+                );
+                const querySnapshot = await getDocs(q);
+                
+                const workouts = [];
+                querySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.workoutName !== 'Rest Day') {
+                        workouts.push(data);
+                    }
+                });
+
+                // Filter by range
+                const now = new Date();
+                let filteredWorkouts = workouts;
+                if (window.chartRange !== 'all') {
+                    const daysAgo = new Date();
+                    daysAgo.setDate(daysAgo.getDate() - parseInt(window.chartRange));
+                    filteredWorkouts = workouts.filter(w => new Date(w.date) >= daysAgo);
+                }
+
+                const dates = filteredWorkouts.map(w => w.date);
+                const totalWeights = filteredWorkouts.map(w => {
+                    return w.exercises.reduce((total, ex) => {
+                        return total + (ex.sets.reduce((sum, set) => sum + (set.weight * set.reps), 0));
+                    }, 0);
+                });
+
+                const ctx = document.getElementById('progressChart').getContext('2d');
+                
+                if (window.progressChart) {
+                    window.progressChart.destroy();
+                }
+
+                window.progressChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: dates,
+                        datasets: [{
+                            label: 'Total Weight (lbs)',
+                            data: totalWeights,
+                            borderColor: '#007aff',
+                            backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading chart:', error);
+            }
+        };
+
+        window.updateChartRange = (range) => {
+            window.chartRange = range;
+            document.querySelectorAll('.chart-controls button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('btn' + (range === 'all' ? 'All' : range)).classList.add('active');
+            loadProgressChart();
         };
 
         window.loadWorkoutTemplates = async () => {
             const templates = document.getElementById('workoutTemplates');
+            templates.innerHTML = '<div class="loading">Loading templates...</div>';
             
-            // Default templates
-            const workouts = [
-                {
-                    name: 'Upper Body Strength',
-                    exercises: [
-                        { name: 'Bench Press', sets: 3, reps: 10, weight: 135 },
-                        { name: 'Shoulder Press', sets: 3, reps: 8, weight: 95 },
-                        { name: 'Pull-ups', sets: 3, reps: 12, weight: 0 }
-                    ]
-                },
-                {
-                    name: 'Lower Body Power',
-                    exercises: [
-                        { name: 'Back Squat', sets: 4, reps: 8, weight: 185 },
-                        { name: 'Romanian Deadlift', sets: 3, reps: 10, weight: 155 },
-                        { name: 'Box Jumps', sets: 3, reps: 10, weight: 0 }
-                    ]
-                },
-                {
-                    name: 'Full Body Conditioning',
-                    exercises: [
-                        { name: 'Kettlebell Swings', sets: 4, reps: 15, weight: 50 },
-                        { name: 'Burpees', sets: 3, reps: 15, weight: 0 },
-                        { name: 'Medicine Ball Slams', sets: 3, reps: 20, weight: 20 }
-                    ]
-                }
-            ];
+            try {
+                const q = query(collection(window.db, 'templates'), where('userId', '==', window.currentUser.uid));
+                const querySnapshot = await getDocs(q);
+                
+                templates.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    const template = { id: doc.id, ...doc.data() };
+                    const btn = document.createElement('button');
+                    btn.className = 'workout-option';
+                    btn.innerHTML = `
+                        <span>${template.name}</span>
+                        <div class="template-actions">
+                            <button onclick="event.stopPropagation(); editTemplate('${template.id}')" class="btn-small btn-secondary">Edit</button>
+                        </div>
+                    `;
+                    btn.onclick = () => selectWorkoutTemplate(template);
+                    templates.appendChild(btn);
+                });
 
-            templates.innerHTML = '';
-            workouts.forEach(workout => {
-                const btn = document.createElement('button');
-                btn.className = 'workout-option';
-                btn.textContent = workout.name;
-                btn.onclick = () => selectWorkoutTemplate(workout);
-                templates.appendChild(btn);
-            });
+                if (querySnapshot.empty) {
+                    templates.innerHTML = '<p class="subtitle">No templates yet. Create your first template!</p>';
+                }
+            } catch (error) {
+                templates.innerHTML = '<p class="error">Error loading templates</p>';
+            }
         };
 
-        window.selectWorkoutTemplate = (workout) => {
+        window.selectNewWorkout = () => {
             window.currentWorkoutLog = {
                 athleteId: window.selectedAthlete.id,
                 date: document.getElementById('dateInput').value,
-                workoutName: workout.name,
-                exercises: workout.exercises.map(ex => ({...ex, notes: ''}))
+                workoutName: '',
+                exercises: []
             };
+            document.getElementById('workoutNameInput').value = '';
+            renderWorkoutLog();
+        };
+
+        window.selectRestDay = async () => {
+            try {
+                await addDoc(collection(window.db, 'workoutLogs'), {
+                    athleteId: window.selectedAthlete.id,
+                    date: document.getElementById('dateInput').value,
+                    workoutName: 'Rest Day',
+                    exercises: [],
+                    userId: window.currentUser.uid,
+                    createdAt: new Date()
+                });
+                alert('Rest day logged!');
+                showAthletesView();
+            } catch (error) {
+                alert('Error logging rest day: ' + error.message);
+            }
+        };
+
+        window.selectWorkoutTemplate = (template) => {
+            window.currentWorkoutLog = {
+                athleteId: window.selectedAthlete.id,
+                date: document.getElementById('dateInput').value,
+                workoutName: template.name,
+                exercises: template.exercises.map(ex => ({
+                    name: ex.name,
+                    sets: ex.sets.map(s => ({...s, notes: ''})),
+                    notes: ''
+                }))
+            };
+            document.getElementById('workoutNameInput').value = template.name;
             renderWorkoutLog();
         };
 
@@ -521,7 +745,16 @@
                 if (!querySnapshot.empty) {
                     const doc = querySnapshot.docs[0];
                     window.currentWorkoutLog = { id: doc.id, ...doc.data() };
-                    renderWorkoutLog();
+                    
+                    if (window.currentWorkoutLog.workoutName === 'Rest Day') {
+                        alert('Rest day logged for this date');
+                        window.currentWorkoutLog = null;
+                        document.getElementById('workoutSelection').classList.remove('hidden');
+                        document.getElementById('workoutLog').classList.add('hidden');
+                    } else {
+                        document.getElementById('workoutNameInput').value = window.currentWorkoutLog.workoutName;
+                        renderWorkoutLog();
+                    }
                 } else {
                     window.currentWorkoutLog = null;
                     document.getElementById('workoutSelection').classList.remove('hidden');
@@ -535,53 +768,110 @@
         window.renderWorkoutLog = () => {
             document.getElementById('workoutSelection').classList.add('hidden');
             document.getElementById('workoutLog').classList.remove('hidden');
-            document.getElementById('workoutTitle').textContent = window.currentWorkoutLog.workoutName;
             
             const exercisesList = document.getElementById('exercisesList');
             exercisesList.innerHTML = '';
             
-            window.currentWorkoutLog.exercises.forEach((exercise, index) => {
+            window.currentWorkoutLog.exercises.forEach((exercise, exIndex) => {
                 const div = document.createElement('div');
                 div.className = 'exercise-block';
+                
+                let setsHTML = '';
+                exercise.sets.forEach((set, setIndex) => {
+                    setsHTML += `
+                        <div class="set-row">
+                            <div class="input-group">
+                                <input type="number" value="${set.sets || 1}" onchange="updateSet(${exIndex}, ${setIndex}, 'sets', this.value)" placeholder="Sets">
+                            </div>
+                            <div class="input-group">
+                                <input type="number" value="${set.reps || 0}" onchange="updateSet(${exIndex}, ${setIndex}, 'reps', this.value)" placeholder="Reps">
+                            </div>
+                            <div class="input-group">
+                                <input type="number" value="${set.weight || 0}" onchange="updateSet(${exIndex}, ${setIndex}, 'weight', this.value)" placeholder="Weight">
+                            </div>
+                            <button class="remove-set-btn" onclick="removeSet(${exIndex}, ${setIndex})">×</button>
+                        </div>
+                    `;
+                });
+
                 div.innerHTML = `
-                    <div class="exercise-name">${exercise.name}</div>
-                    <div class="exercise-inputs">
-                        <div class="input-group">
-                            <label>Sets</label>
-                            <input type="number" value="${exercise.sets}" onchange="updateExercise(${index}, 'sets', this.value)">
-                        </div>
-                        <div class="input-group">
-                            <label>Reps</label>
-                            <input type="number" value="${exercise.reps}" onchange="updateExercise(${index}, 'reps', this.value)">
-                        </div>
-                        <div class="input-group">
-                            <label>Weight</label>
-                            <input type="number" value="${exercise.weight}" onchange="updateExercise(${index}, 'weight', this.value)">
-                        </div>
+                    <input type="text" class="exercise-name-input" value="${exercise.name}" onchange="updateExerciseName(${exIndex}, this.value)" placeholder="Exercise Name">
+                    <div class="set-header">
+                        <div>Sets</div>
+                        <div>Reps</div>
+                        <div>Weight</div>
+                        <div></div>
                     </div>
-                    <textarea placeholder="Notes..." onchange="updateExercise(${index}, 'notes', this.value)">${exercise.notes || ''}</textarea>
+                    ${setsHTML}
+                    <button class="add-set-btn" onclick="addSet(${exIndex})">+ Add Set</button>
+                    <textarea placeholder="Exercise notes..." onchange="updateExerciseNotes(${exIndex}, this.value)">${exercise.notes || ''}</textarea>
+                    <button class="btn btn-danger btn-small" style="margin-top: 8px;" onclick="removeExercise(${exIndex})">Remove Exercise</button>
                 `;
                 exercisesList.appendChild(div);
             });
         };
 
-        window.updateExercise = (index, field, value) => {
-            window.currentWorkoutLog.exercises[index][field] = field === 'notes' ? value : parseInt(value);
+        window.addExercise = () => {
+            window.currentWorkoutLog.exercises.push({
+                name: '',
+                sets: [{ sets: 1, reps: 0, weight: 0 }],
+                notes: ''
+            });
+            renderWorkoutLog();
+        };
+
+        window.removeExercise = (index) => {
+            if (confirm('Remove this exercise?')) {
+                window.currentWorkoutLog.exercises.splice(index, 1);
+                renderWorkoutLog();
+            }
+        };
+
+        window.updateExerciseName = (exIndex, name) => {
+            window.currentWorkoutLog.exercises[exIndex].name = name;
+        };
+
+        window.updateExerciseNotes = (exIndex, notes) => {
+            window.currentWorkoutLog.exercises[exIndex].notes = notes;
+        };
+
+        window.addSet = (exIndex) => {
+            window.currentWorkoutLog.exercises[exIndex].sets.push({ sets: 1, reps: 0, weight: 0 });
+            renderWorkoutLog();
+        };
+
+        window.removeSet = (exIndex, setIndex) => {
+            if (window.currentWorkoutLog.exercises[exIndex].sets.length > 1) {
+                window.currentWorkoutLog.exercises[exIndex].sets.splice(setIndex, 1);
+                renderWorkoutLog();
+            }
+        };
+
+        window.updateSet = (exIndex, setIndex, field, value) => {
+            window.currentWorkoutLog.exercises[exIndex].sets[setIndex][field] = parseInt(value) || 0;
         };
 
         window.saveWorkout = async () => {
+            const workoutName = document.getElementById('workoutNameInput').value;
+            if (!workoutName) {
+                alert('Please enter a workout name');
+                return;
+            }
+
+            window.currentWorkoutLog.workoutName = workoutName;
+
             try {
                 if (window.currentWorkoutLog.id) {
                     await updateDoc(doc(window.db, 'workoutLogs', window.currentWorkoutLog.id), window.currentWorkoutLog);
                 } else {
-                    const docRef = await addDoc(collection(window.db, 'workoutLogs'), {
+                    await addDoc(collection(window.db, 'workoutLogs'), {
                         ...window.currentWorkoutLog,
                         userId: window.currentUser.uid,
                         createdAt: new Date()
                     });
-                    window.currentWorkoutLog.id = docRef.id;
                 }
                 alert('Workout saved successfully!');
+                showAthletesView();
             } catch (error) {
                 alert('Error saving workout: ' + error.message);
             }
@@ -593,12 +883,166 @@
             document.getElementById('workoutLog').classList.add('hidden');
         };
 
+        // Template Management
+        window.showAddTemplate = () => {
+            window.currentTemplate = {
+                name: '',
+                exercises: []
+            };
+            document.getElementById('templateNameInput').value = '';
+            document.getElementById('templateEditorTitle').textContent = 'New Template';
+            document.getElementById('deleteTemplateBtn').classList.add('hidden');
+            renderTemplateEditor();
+            document.getElementById('workoutView').classList.add('hidden');
+            document.getElementById('templateEditor').classList.remove('hidden');
+        };
+
+        window.editTemplate = async (templateId) => {
+            try {
+                const docSnap = await getDoc(doc(window.db, 'templates', templateId));
+                if (docSnap.exists()) {
+                    window.currentTemplate = { id: templateId, ...docSnap.data() };
+                    document.getElementById('templateNameInput').value = window.currentTemplate.name;
+                    document.getElementById('templateEditorTitle').textContent = 'Edit Template';
+                    document.getElementById('deleteTemplateBtn').classList.remove('hidden');
+                    renderTemplateEditor();
+                    document.getElementById('workoutView').classList.add('hidden');
+                    document.getElementById('templateEditor').classList.remove('hidden');
+                }
+            } catch (error) {
+                alert('Error loading template: ' + error.message);
+            }
+        };
+
+        window.renderTemplateEditor = () => {
+            const exercisesList = document.getElementById('templateExercisesList');
+            exercisesList.innerHTML = '';
+            
+            window.currentTemplate.exercises.forEach((exercise, exIndex) => {
+                const div = document.createElement('div');
+                div.className = 'exercise-block';
+                
+                let setsHTML = '';
+                exercise.sets.forEach((set, setIndex) => {
+                    setsHTML += `
+                        <div class="set-row">
+                            <div class="input-group">
+                                <input type="number" value="${set.sets || 1}" onchange="updateTemplateSet(${exIndex}, ${setIndex}, 'sets', this.value)" placeholder="Sets">
+                            </div>
+                            <div class="input-group">
+                                <input type="number" value="${set.reps || 0}" onchange="updateTemplateSet(${exIndex}, ${setIndex}, 'reps', this.value)" placeholder="Reps">
+                            </div>
+                            <div class="input-group">
+                                <input type="number" value="${set.weight || 0}" onchange="updateTemplateSet(${exIndex}, ${setIndex}, 'weight', this.value)" placeholder="Weight">
+                            </div>
+                            <button class="remove-set-btn" onclick="removeTemplateSet(${exIndex}, ${setIndex})">×</button>
+                        </div>
+                    `;
+                });
+
+                div.innerHTML = `
+                    <input type="text" class="exercise-name-input" value="${exercise.name}" onchange="updateTemplateExerciseName(${exIndex}, this.value)" placeholder="Exercise Name">
+                    <div class="set-header">
+                        <div>Sets</div>
+                        <div>Reps</div>
+                        <div>Weight</div>
+                        <div></div>
+                    </div>
+                    ${setsHTML}
+                    <button class="add-set-btn" onclick="addTemplateSet(${exIndex})">+ Add Set</button>
+                    <button class="btn btn-danger btn-small" style="margin-top: 8px;" onclick="removeTemplateExercise(${exIndex})">Remove Exercise</button>
+                `;
+                exercisesList.appendChild(div);
+            });
+        };
+
+        window.addTemplateExercise = () => {
+            window.currentTemplate.exercises.push({
+                name: '',
+                sets: [{ sets: 1, reps: 0, weight: 0 }]
+            });
+            renderTemplateEditor();
+        };
+
+        window.removeTemplateExercise = (index) => {
+            if (confirm('Remove this exercise?')) {
+                window.currentTemplate.exercises.splice(index, 1);
+                renderTemplateEditor();
+            }
+        };
+
+        window.updateTemplateExerciseName = (exIndex, name) => {
+            window.currentTemplate.exercises[exIndex].name = name;
+        };
+
+        window.addTemplateSet = (exIndex) => {
+            window.currentTemplate.exercises[exIndex].sets.push({ sets: 1, reps: 0, weight: 0 });
+            renderTemplateEditor();
+        };
+
+        window.removeTemplateSet = (exIndex, setIndex) => {
+            if (window.currentTemplate.exercises[exIndex].sets.length > 1) {
+                window.currentTemplate.exercises[exIndex].sets.splice(setIndex, 1);
+                renderTemplateEditor();
+            }
+        };
+
+        window.updateTemplateSet = (exIndex, setIndex, field, value) => {
+            window.currentTemplate.exercises[exIndex].sets[setIndex][field] = parseInt(value) || 0;
+        };
+
+        window.saveTemplate = async () => {
+            const templateName = document.getElementById('templateNameInput').value;
+            if (!templateName) {
+                alert('Please enter a template name');
+                return;
+            }
+
+            window.currentTemplate.name = templateName;
+
+            try {
+                if (window.currentTemplate.id) {
+                    await updateDoc(doc(window.db, 'templates', window.currentTemplate.id), window.currentTemplate);
+                } else {
+                    await addDoc(collection(window.db, 'templates'), {
+                        ...window.currentTemplate,
+                        userId: window.currentUser.uid,
+                        createdAt: new Date()
+                    });
+                }
+                alert('Template saved successfully!');
+                cancelTemplateEdit();
+            } catch (error) {
+                alert('Error saving template: ' + error.message);
+            }
+        };
+
+        window.deleteTemplate = async () => {
+            if (!confirm('Are you sure you want to delete this template?')) {
+                return;
+            }
+
+            try {
+                await deleteDoc(doc(window.db, 'templates', window.currentTemplate.id));
+                alert('Template deleted successfully!');
+                cancelTemplateEdit();
+            } catch (error) {
+                alert('Error deleting template: ' + error.message);
+            }
+        };
+
+        window.cancelTemplateEdit = () => {
+            window.currentTemplate = null;
+            document.getElementById('templateEditor').classList.add('hidden');
+            document.getElementById('workoutView').classList.remove('hidden');
+            loadWorkoutTemplates();
+        };
+
         window.generateAIReview = async () => {
             const reviewContent = document.getElementById('aiReviewContent');
             reviewContent.innerHTML = '<div class="loading">Generating AI review...</div>';
             
             try {
-                // Get all workout logs for this athlete
                 const q = query(
                     collection(window.db, 'workoutLogs'),
                     where('athleteId', '==', window.selectedAthlete.id),
@@ -611,20 +1055,16 @@
                     workouts.push(doc.data());
                 });
 
-                // Prepare data for AI
                 const workoutSummary = workouts.map(w => ({
                     date: w.date,
                     workout: w.workoutName,
                     exercises: w.exercises.map(e => ({
                         name: e.name,
                         sets: e.sets,
-                        reps: e.reps,
-                        weight: e.weight,
                         notes: e.notes
                     }))
                 }));
 
-                // Call Gemini API
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${window.GEMINI_API_KEY}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -646,36 +1086,6 @@
             }
         };
 
-        window.togglePromptEditor = () => {
-            const editor = document.getElementById('promptEditor');
-            editor.classList.toggle('hidden');
-            document.getElementById('aiPromptText').value = window.aiPrompt;
-        };
-
-        window.savePrompt = async () => {
-            window.aiPrompt = document.getElementById('aiPromptText').value;
-            try {
-                await setDoc(doc(window.db, 'settings', window.currentUser.uid), {
-                    aiPrompt: window.aiPrompt
-                });
-                alert('AI prompt saved!');
-                document.getElementById('promptEditor').classList.add('hidden');
-            } catch (error) {
-                alert('Error saving prompt: ' + error.message);
-            }
-        };
-
-        window.loadAIPrompt = async () => {
-            try {
-                const docSnap = await getDoc(doc(window.db, 'settings', window.currentUser.uid));
-                if (docSnap.exists()) {
-                    window.aiPrompt = docSnap.data().aiPrompt;
-                }
-            } catch (error) {
-                console.log('Using default AI prompt');
-            }
-        };
-
         window.showMessage = (message, type) => {
             const messageDiv = document.getElementById('authMessage');
             messageDiv.className = type;
@@ -685,9 +1095,3 @@
                 messageDiv.textContent = '';
             }, 3000);
         };
-
-        // Date change listener
-        document.getElementById('dateInput')?.addEventListener('change', loadWorkoutForDate);
-    </script>
-</body>
-</html>
