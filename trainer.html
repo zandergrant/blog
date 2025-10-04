@@ -321,7 +321,6 @@
     </style>
 </head>
 <body>
-    <!-- Auth Section -->
     <div id="authSection">
         <div class="container">
             <h1>Lacrosse Trainer</h1>
@@ -336,9 +335,7 @@
         </div>
     </div>
 
-    <!-- Main App Section -->
     <div id="appSection" class="hidden">
-        <!-- Athletes List View -->
         <div id="athletesView">
             <div class="container">
                 <div class="header-flex">
@@ -351,7 +348,6 @@
             </div>
         </div>
 
-        <!-- Add Athlete View -->
         <div id="addAthleteView" class="hidden">
             <div class="container">
                 <button onclick="showAthletesView()" class="back-btn">← Back</button>
@@ -363,13 +359,11 @@
             </div>
         </div>
 
-        <!-- Workout View -->
         <div id="workoutView" class="hidden">
             <div class="container">
                 <button onclick="showAthletesView()" class="back-btn">← Athletes</button>
                 <h1 id="athleteNameTitle"></h1>
                 
-                <!-- Progress Chart -->
                 <div class="card">
                     <h2>Progress</h2>
                     <div class="chart-controls">
@@ -386,7 +380,6 @@
                     <button onclick="loadWorkoutForDate()" class="btn btn-small">View</button>
                 </div>
                 
-                <!-- Workout Selection -->
                 <div id="workoutSelection">
                     <h2>Select a Workout</h2>
                     <button onclick="selectNewWorkout()" class="workout-option">
@@ -401,7 +394,6 @@
                     <button onclick="showAddTemplate()" class="btn btn-secondary" style="margin-top: 12px;">+ Add New Template</button>
                 </div>
 
-                <!-- Workout Log -->
                 <div id="workoutLog" class="hidden">
                     <div class="card">
                         <input type="text" id="workoutNameInput" class="input" placeholder="Workout Name" style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
@@ -412,7 +404,6 @@
                     </div>
                 </div>
 
-                <!-- AI Review Section -->
                 <div class="card">
                     <h2>AI Review</h2>
                     <button onclick="generateAIReview()" class="btn">Generate AI Review</button>
@@ -421,7 +412,6 @@
             </div>
         </div>
 
-        <!-- Template Editor -->
         <div id="templateEditor" class="hidden">
             <div class="container">
                 <button onclick="cancelTemplateEdit()" class="back-btn">← Back</button>
@@ -437,26 +427,27 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script>
-        // Define global function placeholders
-        window.signIn = () => console.log('Loading...');
-        window.signUp = () => console.log('Loading...');
-    </script>
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, doc, setDoc, getDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-        // Firebase Configuration
+        // --- SECURITY WARNING ---
+        // Exposing API keys in client-side code is a security risk.
+        // Use environment variables with a build process or a backend function
+        // to protect your credentials.
         const firebaseConfig = {
-            apiKey: "AIzaSyBf9M5uvWGnspLTY-I9bx15JascZVEdMAg",
-            authDomain: "trainer-1983d.firebaseapp.com",
-            projectId: "trainer-1983d",
-            storageBucket: "trainer-1983d.firebasestorage.app",
-            messagingSenderId: "675434748399",
-            appId: "1:675434748399:web:81e661aab7a1219b7fbe1a"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
+        
+        // --- SECURITY WARNING ---
+        // Your Gemini API Key should also be secured.
+        window.GEMINI_API_KEY = "YOUR_GEMINI_API_KEY";
 
         const app = initializeApp(firebaseConfig);
         window.auth = getAuth(app);
@@ -472,9 +463,17 @@
         
         // AI Prompt - EDIT THIS AS THE CODER
         window.aiPrompt = "Analyze this athlete's performance based on their workout logs. Include: 1) Total workouts completed, 2) Weight progression trends, 3) Summary of their notes/comments, 4) Specific suggestions for improvement. Keep it concise and motivating.";
-        
-        // Gemini API Key
-        window.GEMINI_API_KEY = "AIzaSyCmDGaGi5Uj0hVt8duiCQ-iFqeWKf5Tk1o";
+
+        // Helper function for auth messages
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('authMessage');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            setTimeout(() => {
+                messageDiv.className = '';
+                messageDiv.textContent = '';
+            }, 3000);
+        }
 
         // Setup auth button listeners
         document.getElementById('signInBtn').addEventListener('click', async () => {
@@ -528,17 +527,6 @@
                 document.getElementById('appSection').classList.add('hidden');
             }
         });
-
-        // Helper function for messages
-        function showMessage(message, type) {
-            const messageDiv = document.getElementById('authMessage');
-            messageDiv.className = type;
-            messageDiv.textContent = message;
-            setTimeout(() => {
-                messageDiv.className = '';
-                messageDiv.textContent = '';
-            }, 3000);
-        }
 
         window.showAthletesView = async () => {
             document.getElementById('athletesView').classList.remove('hidden');
@@ -1119,13 +1107,6 @@
                 reviewContent.innerHTML = `<p class="error">Error: ${error.message}</p>`;
             }
         };
-
-        window.showMessage = (message, type) => {
-            const messageDiv = document.getElementById('authMessage');
-            messageDiv.className = type;
-            messageDiv.textContent = message;
-            setTimeout(() => {
-                messageDiv.className = '';
-                messageDiv.textContent = '';
-            }, 3000);
-        };
+    </script>
+</body>
+</html>
