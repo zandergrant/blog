@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Inner Lab</title>
     
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
 
+    <!-- Internal CSS -->
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -21,8 +23,7 @@
 
         header {
             text-align: center;
-            margin-bottom: 40px;
-            border-bottom: 1px solid #dde3e8;
+            margin-bottom: 20px;
             padding-bottom: 20px;
         }
 
@@ -31,6 +32,28 @@
             font-weight: 600;
             color: #1a2533;
             font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .date-selector-container {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #dde3e8;
+        }
+
+        .date-selector-container label {
+            font-weight: 600;
+            margin-right: 10px;
+            color: #0a2d4d;
+        }
+
+        #date-selector {
+            font-family: 'Inter', sans-serif;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #dde3e8;
+            font-size: 1rem;
         }
 
         main {
@@ -77,6 +100,7 @@
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 20px;
+            min-height: 50px;
         }
 
         .flashcard {
@@ -133,6 +157,38 @@
             font-size: 0.9rem;
             margin: 0;
         }
+
+        /* Journal Styles */
+        #journal-entry {
+            width: 100%;
+            min-height: 200px;
+            border-radius: 6px;
+            border: 1px solid #dde3e8;
+            padding: 15px;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            line-height: 1.6;
+            resize: vertical;
+        }
+
+        #save-journal-btn {
+            display: block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 1rem;
+            border: none;
+            border-radius: 6px;
+            background-color: #0077b6;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #save-journal-btn:hover {
+            background-color: #005f73;
+        }
     </style>
 </head>
 <body>
@@ -140,26 +196,44 @@
         <h1>The Inner Lab Method</h1>
         <p>A proactive practice for a centered response.</p>
     </header>
+    
+    <div class="date-selector-container">
+        <label for="date-selector">Select a Day:</label>
+        <input type="date" id="date-selector">
+    </div>
+
     <main>
+        <!-- Module 1: Research of the Day -->
         <section class="module" id="research-module">
             <h2>Research of the Day</h2>
             <div class="brief-container">
                 <h3 id="brief-title">Loading...</h3>
-                <p id="brief-body">Please wait while we fetch today's insights.</p>
+                <p id="brief-body"></p>
                 <small id="brief-source"></small>
             </div>
         </section>
 
+        <!-- Module 2: Core Concepts -->
         <section class="module" id="concepts-module">
             <h2>Core Concepts</h2>
             <div class="flashcard-grid" id="flashcard-grid">
-                </div>
+                <!-- Flashcards will be dynamically inserted here -->
+            </div>
+        </section>
+
+        <!-- Module 3: Synthesis Journal -->
+        <section class="module" id="journal-module">
+            <h2>Synthesis Journal</h2>
+            <textarea id="journal-entry" placeholder="Synthesize today's topics here. What connections can you make? How can you apply this?"></textarea>
+            <button id="save-journal-btn">Save Journal</button>
         </section>
     </main>
 
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
     
+    <!-- Your custom script -->
     <script src="script.js"></script>
 </body>
 </html>
