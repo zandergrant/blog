@@ -344,7 +344,8 @@
             const contentEl = document.getElementById('research-paper-content');
             
             // Replaces newline characters from the AI with HTML paragraph tags for better formatting.
-            const formatContent = (text) => text.replace(/\n/g, '</p><p>');
+            // **FIXED**: Checks if text exists before trying to replace.
+            const formatContent = (text) => (text || '').replace(/\n/g, '</p><p>');
 
             contentEl.innerHTML = `
                 <h4>Introduction</h4>
@@ -355,7 +356,7 @@
                 <p>${formatContent(research.conclusion)}</p>
             `;
             
-            document.getElementById('brief-source').textContent = `Source: ${research.source}`;
+            document.getElementById('brief-source').textContent = `Source: ${research.source || 'N/A'}`;
         }
 
         function displayConcepts(concepts) {
