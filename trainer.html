@@ -330,8 +330,8 @@
                 <div id="authMessage"></div>
                 <input type="email" id="emailInput" class="input" placeholder="Email">
                 <input type="password" id="passwordInput" class="input" placeholder="Password">
-                <button onclick="window.signIn()" class="btn">Sign In</button>
-                <button onclick="window.signUp()" class="btn btn-secondary" style="margin-top: 12px;">Create Account</button>
+                <button id="signInBtn" class="btn">Sign In</button>
+                <button id="signUpBtn" class="btn btn-secondary" style="margin-top: 12px;">Create Account</button>
             </div>
         </div>
     </div>
@@ -438,6 +438,11 @@
     </div>
 
     <!-- Firebase SDK -->
+    <script>
+        // Define global function placeholders
+        window.signIn = () => console.log('Loading...');
+        window.signUp = () => console.log('Loading...');
+    </script>
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -471,6 +476,45 @@
         // Gemini API Key
         window.GEMINI_API_KEY = "AIzaSyCmDGaGi5Uj0hVt8duiCQ-iFqeWKf5Tk1o";
 
+        // Setup auth button listeners
+        document.getElementById('signInBtn').addEventListener('click', async () => {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            
+            if (!email || !password) {
+                showMessage('Please enter email and password', 'error');
+                return;
+            }
+            
+            try {
+                await signInWithEmailAndPassword(window.auth, email, password);
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        });
+
+        document.getElementById('signUpBtn').addEventListener('click', async () => {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            
+            if (!email || !password) {
+                showMessage('Please enter email and password', 'error');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showMessage('Password must be at least 6 characters', 'error');
+                return;
+            }
+            
+            try {
+                await createUserWithEmailAndPassword(window.auth, email, password);
+                showMessage('Account created successfully!', 'success');
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        });
+
         // Auth state observer
         onAuthStateChanged(window.auth, async (user) => {
             if (user) {
@@ -485,26 +529,16 @@
             }
         });
 
-        window.signIn = async () => {
-            const email = document.getElementById('emailInput').value;
-            const password = document.getElementById('passwordInput').value;
-            try {
-                await signInWithEmailAndPassword(window.auth, email, password);
-            } catch (error) {
-                showMessage('Error: ' + error.message, 'error');
-            }
-        };
-
-        window.signUp = async () => {
-            const email = document.getElementById('emailInput').value;
-            const password = document.getElementById('passwordInput').value;
-            try {
-                await createUserWithEmailAndPassword(window.auth, email, password);
-                showMessage('Account created successfully!', 'success');
-            } catch (error) {
-                showMessage('Error: ' + error.message, 'error');
-            }
-        };
+        // Helper function for messages
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('authMessage');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            setTimeout(() => {
+                messageDiv.className = '';
+                messageDiv.textContent = '';
+            }, 3000);
+        }
 
         window.showAthletesView = async () => {
             document.getElementById('athletesView').classList.remove('hidden');
