@@ -3,70 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Zander</title>
-    <link rel="stylesheet" href="style.css">
+    <title>The Inner Lab</title>
+    
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
+
+    <!-- Internal CSS -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f4f7f9;
+            color: #333;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .date-container {
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 20px;
+            text-align: center;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 30, 80, 0.05);
+        }
+        .date-container label {
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        #date-selector {
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #dde3e8;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+        }
+        header {
+            text-align: center;
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 40px;
+            border-bottom: 1px solid #dde3e8;
+            padding-bottom: 20px;
+        }
+        header h1 {
+            font-family: 'Source Serif 4', serif;
+            font-weight: 600;
+            color: #1a2533;
+            font-size: 2.5rem;
+            margin: 0;
+        }
+        main {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .module {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 30, 80, 0.05);
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        .module h2 {
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            color: #005f73;
+            margin-top: 0;
+            border-bottom: 2px solid #e0f7fa;
+            padding-bottom: 10px;
+        }
+        .brief-container h3 { font-size: 1.4rem; color: #0a2d4d; margin-bottom: 10px; }
+        .brief-container p { font-size: 1rem; margin-bottom: 15px; }
+        .brief-container small { font-style: italic; color: #6c757d; }
+        .flashcard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        .flashcard {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            perspective: 1000px;
+        }
+        .flashcard:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 30, 80, 0.1); }
+        .flashcard .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            min-height: 100px;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+        .flashcard.is-flipped .card-inner { transform: rotateY(180deg); }
+        .card-face {
+            position: absolute; width: 100%; height: 100%;
+            -webkit-backface-visibility: hidden; backface-visibility: hidden;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        .card-front h3 { margin: 0; font-size: 1.2rem; color: #0077b6; }
+        .card-back { transform: rotateY(180deg); }
+        .card-back p { font-size: 0.9rem; margin: 0; }
+        #journal-entry {
+            width: 100%;
+            min-height: 150px;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #dde3e8;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            resize: vertical;
+        }
+        #save-journal-btn {
+            background-color: #0077b6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background-color 0.2s;
+            margin-top: 10px;
+        }
+        #save-journal-btn:hover { background-color: #005f73; }
+    </style>
 </head>
 <body>
-
-    <header class="navbar">
-        <div class="container">
-            <a href="#" class="logo">ZANDER</a>
-            <nav>
-                <ul>
-                    <li><a href="clarity-engine.html">Assistant</a></li>
-                    <li><a href="trainer.html">Trainer</a></li>
-                    <li><a href="#">Running</a></li>
-                    <li><a href="#">Contact</a></li>
-                </ul>
-            </nav>
-        </div>
+    <header>
+        <h1>The Inner Lab Method</h1>
     </header>
+    
+    <div class="date-container">
+        <label for="date-selector">Select a Day:</label>
+        <input type="date" id="date-selector">
+    </div>
 
     <main>
-        <section class="hero">
-            <div class="container">
-                <h1>Zander Grant</h1>
-                <a href="#" class="cta-button">Shop Best Sellers</a>
+        <!-- Module 1: Research of the Day -->
+        <section class="module" id="research-module">
+            <h2>Research of the Day</h2>
+            <div class="brief-container">
+                <h3 id="brief-title">Loading...</h3>
+                <p id="brief-body">Please wait while we fetch today's insights.</p>
+                <small id="brief-source"></small>
             </div>
         </section>
 
-        <section class="products">
-            <div class="container">
-                <h2>Featured Products</h2>
-                <div class="product-grid">
-                    <div class="product-card">
-                        <img src="https://via.placeholder.com/300x300" alt="Cleanser">
-                        <h3>Gentle Cleanser</h3>
-                        <p class="price">$28.00</p>
-                        <button>Add to Cart</button>
-                    </div>
-
-                    <div class="product-card">
-                        <img src="https://via.placeholder.com/300x300" alt="Serum">
-                        <h3>Hydrating Serum</h3>
-                        <p class="price">$45.00</p>
-                        <button>Add to Cart</button>
-                    </div>
-
-                    <div class="product-card">
-                        <img src="https://via.placeholder.com/300x300" alt="Moisturizer">
-                        <h3>Daily Moisturizer</h3>
-                        <p class="price">$35.00</p>
-                        <button>Add to Cart</button>
-                    </div>
-                </div>
+        <!-- Module 2: Core Concepts -->
+        <section class="module" id="concepts-module">
+            <h2>Core Concepts</h2>
+            <div class="flashcard-grid" id="flashcard-grid">
+                <!-- Flashcards will be dynamically inserted here -->
             </div>
+        </section>
+
+        <!-- Module 3: Synthesis Journal -->
+        <section class="module" id="journal-module">
+            <h2>Synthesis Journal</h2>
+            <p>Synthesize today's topics here. What connections can you make? How can you apply this?</p>
+            <textarea id="journal-entry" placeholder="Your thoughts..."></textarea>
+            <button id="save-journal-btn">Save Journal</button>
         </section>
     </main>
 
-    <footer class="site-footer">
-        <div class="container">
-            <p>&copy; 2025 Your Skincare Brand. All Rights Reserved.</p>
-        </div>
-    </footer>
-
+    <!-- This single script tag uses the modern "module" type -->
+    <script type="module" src="script.js"></script>
 </body>
 </html>
+
