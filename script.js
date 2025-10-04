@@ -1,5 +1,9 @@
+// --- Modern (v9) Firebase Imports ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore.js";
+
 // --- Configuration ---
-const GEMINI_API_KEY = ""; // Handled by the environment
+const GEMINI_API_KEY = ""; // This is handled by the environment
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
 
 // Your web app's Firebase configuration
@@ -9,7 +13,7 @@ const firebaseConfig = {
   projectId: "innerlabresearch",
   storageBucket: "innerlabresearch.appspot.com",
   messagingSenderId: "137996904547",
-  appId: "1:137996904547:web:9a1b86dc9aa41237fcb056", // Corrected potential typo
+  appId: "1:137996904547:web:9a1b86dc9aa41237fcb056",
   measurementId: "G-VGVRLJSWPZ"
 };
 // ----------------------------------------------
@@ -22,8 +26,9 @@ let currentDate;
 // --- Initialize App ---
 document.addEventListener('DOMContentLoaded', () => {
     try {
-        firebase.initializeApp(firebaseConfig);
-        db = firebase.firestore();
+        // Initialize Firebase using the new modular functions
+        const app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
 
         const dateSelector = document.getElementById('date-selector');
         
@@ -43,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('save-journal-btn').addEventListener('click', saveJournal);
     } catch (error) {
         console.error("Firebase initialization failed:", error);
-        showErrorState("Firebase initialization failed. Please check your firebaseConfig object in script.js.");
+        showErrorState("Firebase initialization failed. Check the console and your firebaseConfig object.");
     }
 });
 
@@ -51,13 +56,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadDataForDate(dateString) {
     showLoadingState();
-    const docRef = db.collection('dailyEntries').doc(dateString);
+    // Use the new `doc` function to create a document reference
+    const docRef = doc(db, 'dailyEntries', dateString);
     
     try {
-        const docSnap = await docRef.get();
+        const docSnap = await getDoc(docRef);
 
-        // CORRECTED THIS LINE: .exists is a property, not a function, in this version of Firebase
-        if (docSnap.exists) { 
+        if (docSnap.exists()) {
             const data = docSnap.data();
             displayResearch(data.research);
             displayConcepts(data.concepts);
@@ -75,7 +80,7 @@ async function loadDataForDate(dateString) {
                 journal: '' 
             };
 
-            await docRef.set(newData);
+            await setDoc(docRef, newData);
             console.log(`Data for ${dateString} saved to Firebase.`);
 
             displayResearch(newData.research);
@@ -84,27 +89,31 @@ async function loadDataForDate(dateString) {
         }
     } catch (error) {
         console.error("Error loading or generating data:", error);
-        showErrorState("Could not load data from the database. Please check Firestore rules and network connection.");
+        showErrorState(error.message); // Display the actual error message
     }
 }
 
 async function saveJournal() {
     const journalText = document.getElementById('journal-entry').value;
     const saveButton = document.getElementById('save-journal-btn');
+    saveButton.disabled = true;
     saveButton.textContent = 'Saving...';
 
-    const docRef = db.collection('dailyEntries').doc(currentDate);
+    const docRef = doc(db, 'dailyEntries', currentDate);
 
     try {
-        await docRef.update({ journal: journalText });
+        await updateDoc(docRef, { journal: journalText });
         saveButton.textContent = 'Saved!';
-        setTimeout(() => { saveButton.textContent = 'Save Journal'; }, 2000);
+        setTimeout(() => { 
+            saveButton.textContent = 'Save Journal';
+            saveButton.disabled = false;
+        }, 2000);
     } catch (error) {
         console.error("Error saving journal:", error);
         saveButton.textContent = 'Error - Retry';
+        saveButton.disabled = false;
     }
 }
-
 
 // --- AI Generation Functions ---
 
