@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lacrosse Trainer</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -330,8 +330,8 @@
                 <div id="authMessage"></div>
                 <input type="email" id="emailInput" class="input" placeholder="Email">
                 <input type="password" id="passwordInput" class="input" placeholder="Password">
-                <button onclick="signIn()" class="btn">Sign In</button>
-                <button onclick="signUp()" class="btn btn-secondary" style="margin-top: 12px;">Create Account</button>
+                <button onclick="window.signIn()" class="btn">Sign In</button>
+                <button onclick="window.signUp()" class="btn btn-secondary" style="margin-top: 12px;">Create Account</button>
             </div>
         </div>
     </div>
