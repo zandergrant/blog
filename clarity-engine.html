@@ -7,7 +7,7 @@
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
 
     <!-- Internal CSS -->
@@ -137,6 +137,7 @@
             margin-top: 10px;
         }
         #save-journal-btn:hover { background-color: #005f73; }
+        #save-journal-btn:disabled { background-color: #a0a0a0; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -177,8 +178,12 @@
         </section>
     </main>
 
-    <!-- CORRECTED SCRIPT TAG: Added type="module" -->
-    <script type="module" src="script.js"></script>
+    <!-- Firebase SDKs (Compatibility version) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+
+    <!-- Your custom script (no longer a module) -->
+    <script src="script.js"></script>
 </body>
 </html>
 
