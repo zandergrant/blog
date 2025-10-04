@@ -320,14 +320,14 @@
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, doc, setDoc, getDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-        // Firebase Configuration - REPLACE WITH YOUR CONFIG
+        // Firebase Configuration - COMPLETE WITH YOUR CREDENTIALS
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyBf9M5uvWGnspLTY-I9bx15JascZVEdMAg",
+            authDomain: "trainer-1983d.firebaseapp.com",
+            projectId: "trainer-1983d",
+            storageBucket: "trainer-1983d.firebasestorage.app",
+            messagingSenderId: "675434748399",
+            appId: "1:675434748399:web:81e661aab7a1219b7fbe1a"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -340,8 +340,8 @@
         window.currentWorkoutLog = null;
         window.aiPrompt = "Analyze this athlete's performance based on their workout logs. Include: 1) Total workouts completed, 2) Weight progression trends, 3) Summary of their notes/comments, 4) Specific suggestions for improvement. Keep it concise and motivating.";
         
-        // Gemini API Key - REPLACE WITH YOUR KEY
-        window.GEMINI_API_KEY = "YOUR_GEMINI_API_KEY";
+        // Gemini API Key
+        window.GEMINI_API_KEY = "AIzaSyCmDGaGi5Uj0hVt8duiCQ-iFqeWKf5Tk1o";
 
         // Auth state observer
         onAuthStateChanged(window.auth, async (user) => {
@@ -442,7 +442,7 @@
                     athletesList.appendChild(btn);
                 });
             } catch (error) {
-                athletesList.innerHTML = '<p class="error">Error loading athletes</p>';
+                athletesList.innerHTML = '<p class="error">Error loading athletes: ' + error.message + '</p>';
             }
         };
 
@@ -509,21 +509,26 @@
 
         window.loadWorkoutForDate = async () => {
             const date = document.getElementById('dateInput').value;
-            const q = query(
-                collection(window.db, 'workoutLogs'),
-                where('athleteId', '==', window.selectedAthlete.id),
-                where('date', '==', date)
-            );
             
-            const querySnapshot = await getDocs(q);
-            if (!querySnapshot.empty) {
-                const doc = querySnapshot.docs[0];
-                window.currentWorkoutLog = { id: doc.id, ...doc.data() };
-                renderWorkoutLog();
-            } else {
-                window.currentWorkoutLog = null;
-                document.getElementById('workoutSelection').classList.remove('hidden');
-                document.getElementById('workoutLog').classList.add('hidden');
+            try {
+                const q = query(
+                    collection(window.db, 'workoutLogs'),
+                    where('athleteId', '==', window.selectedAthlete.id),
+                    where('date', '==', date)
+                );
+                
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    const doc = querySnapshot.docs[0];
+                    window.currentWorkoutLog = { id: doc.id, ...doc.data() };
+                    renderWorkoutLog();
+                } else {
+                    window.currentWorkoutLog = null;
+                    document.getElementById('workoutSelection').classList.remove('hidden');
+                    document.getElementById('workoutLog').classList.add('hidden');
+                }
+            } catch (error) {
+                console.error('Error loading workout:', error);
             }
         };
 
