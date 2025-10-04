@@ -1,15 +1,17 @@
 // --- Firebase Configuration ---
-// PASTE YOUR FIREBASE CONFIGURATION OBJECT FROM YOUR FIREBASE PROJECT HERE
+// This is your specific configuration that connects to YOUR project.
 const firebaseConfig = {
-  apiKey: "AIza...",
-  authDomain: "your-project-id.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project-id.appspot.com",
-  messagingSenderId: "...",
-  appId: "..."
+  apiKey: "AIzaSyDeT_BSciMftq2Rx7Gzk63oP-DgNNslXME",
+  authDomain: "innerlabresearch.firebaseapp.com",
+  projectId: "innerlabresearch",
+  storageBucket: "innerlabresearch.firebasestorage.app", // Note: The correct property is storageBucket, not firebasestorage.app
+  messagingSenderId: "137996904547",
+  appId: "1:137996904547:web:9a1b86dc9aa41237fcb056",
+  measurementId: "G-VGVRLJSWPZ"
 };
 
 // --- Initialize Firebase ---
+// This uses the "compat" library loaded in your index.html
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
