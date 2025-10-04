@@ -81,10 +81,17 @@
         }
         .brief-container h3 { font-size: 1.4rem; color: #0a2d4d; margin-bottom: 10px; }
         .brief-container p { font-size: 1rem; margin-bottom: 15px; }
-        .brief-container small { font-style: italic; color: #6c757d; }
+        .brief-container small { font-style: italic; color: #6c757d; display: block; margin-top: 15px;}
+        #research-paper-content h4 {
+            color: #005f73;
+            font-weight: 600;
+            border-bottom: 1px solid #e0f7fa;
+            padding-bottom: 5px;
+            margin-top: 20px;
+        }
         .flashcard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
         }
         .flashcard {
@@ -153,10 +160,12 @@
     <main>
         <!-- Module 1: Research of the Day -->
         <section class="module" id="research-module">
-            <h2>Research of the Day</h2>
+            <h2>Research Paper of the Day</h2>
             <div class="brief-container">
                 <h3 id="brief-title">Loading...</h3>
-                <p id="brief-body">Please wait while we fetch today's insights.</p>
+                <div id="research-paper-content">
+                    <p id="brief-body">Please wait while we fetch today's insights.</p>
+                </div>
                 <small id="brief-source"></small>
             </div>
         </section>
@@ -289,10 +298,19 @@
         // --- AI Generation Functions ---
 
         async function generateAiResearch() {
-            const userPrompt = "Generate a 'Research of the Day' brief about a key study or concept related to emotional regulation, relevant to ambitious professionals. Provide a title, a concise brief (2-3 sentences), and a source.";
+            const userPrompt = "Generate a 'Research Paper of the Day' summary about a key study or concept related to emotional regulation, relevant to ambitious professionals. The summary should be structured like a mini-paper with a compelling title, an 'introduction' (~150 words), 'keyFindings' (~200 words, can include paragraphs or bullet points), a 'conclusion' (~100 words), and a source.";
             const payload = {
                 contents: [{ parts: [{ text: userPrompt }] }],
-                generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { "title": { "type": "STRING" }, "brief": { "type": "STRING" }, "source": { "type": "STRING" } } } }
+                generationConfig: { responseMimeType: "application/json", responseSchema: { 
+                    type: "OBJECT", 
+                    properties: { 
+                        "title": { "type": "STRING" }, 
+                        "introduction": { "type": "STRING" }, 
+                        "keyFindings": { "type": "STRING" }, 
+                        "conclusion": { "type": "STRING" }, 
+                        "source": { "type": "STRING" } 
+                    } 
+                } }
             };
             const response = await fetch(GEMINI_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) throw new Error(`API call failed with status: ${response.status}`);
@@ -301,7 +319,7 @@
         }
 
         async function generateAiCoreConcepts() {
-            const userPrompt = "Generate a list of exactly 5 essential core concepts related to CBT and performance psychology. For each, provide a 'term' and a concise 'definition'.";
+            const userPrompt = "Generate a list of exactly 3 essential core concepts related to CBT and performance psychology. For each, provide a 'term' and a concise 'definition'.";
             const payload = {
                 contents: [{ parts: [{ text: userPrompt }] }],
                 generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { "term": { "type": "STRING" }, "definition": { "type": "STRING" } } } } }
@@ -323,7 +341,20 @@
 
         function displayResearch(research) {
             document.getElementById('brief-title').textContent = research.title;
-            document.getElementById('brief-body').textContent = research.brief;
+            const contentEl = document.getElementById('research-paper-content');
+            
+            // Replaces newline characters from the AI with HTML paragraph tags for better formatting.
+            const formatContent = (text) => text.replace(/\n/g, '</p><p>');
+
+            contentEl.innerHTML = `
+                <h4>Introduction</h4>
+                <p>${formatContent(research.introduction)}</p>
+                <h4>Key Findings</h4>
+                <p>${formatContent(research.keyFindings)}</p>
+                <h4>Conclusion</h4>
+                <p>${formatContent(research.conclusion)}</p>
+            `;
+            
             document.getElementById('brief-source').textContent = `Source: ${research.source}`;
         }
 
@@ -353,7 +384,7 @@
 
         function showLoadingState() {
             document.getElementById('brief-title').textContent = "Loading...";
-            document.getElementById('brief-body').textContent = "Fetching insights from our records or generating new ones with AI...";
+            document.getElementById('research-paper-content').innerHTML = "<p>Fetching insights from our records or generating new ones with AI...</p>";
             document.getElementById('brief-source').textContent = "";
             document.getElementById('flashcard-grid').innerHTML = "<p>Loading concepts...</p>";
             document.getElementById('journal-entry').value = "";
@@ -361,7 +392,7 @@
 
         function showErrorState(message) {
             document.getElementById('brief-title').textContent = "An Error Occurred";
-            document.getElementById('brief-body').textContent = `Details: ${message || "Could not load or generate content. Please check the console for errors."}`;
+            document.getElementById('research-paper-content').innerHTML = `<p>Details: ${message || "Could not load or generate content. Please check the console for errors."}</p>`;
             document.getElementById('flashcard-grid').innerHTML = "<p>Could not load concepts.</p>";
         }
     </script>
