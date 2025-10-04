@@ -81,10 +81,17 @@
         }
         .brief-container h3 { font-size: 1.4rem; color: #0a2d4d; margin-bottom: 10px; }
         .brief-container p { font-size: 1rem; margin-bottom: 15px; }
-        .brief-container small { font-style: italic; color: #6c757d; }
+        .brief-container small { font-style: italic; color: #6c757d; display: block; margin-top: 15px;}
+        #research-paper-content h4 {
+            color: #005f73;
+            font-weight: 600;
+            border-bottom: 1px solid #e0f7fa;
+            padding-bottom: 5px;
+            margin-top: 20px;
+        }
         .flashcard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
         }
         .flashcard {
@@ -137,6 +144,7 @@
             margin-top: 10px;
         }
         #save-journal-btn:hover { background-color: #005f73; }
+        #save-journal-btn:disabled { background-color: #a0a0a0; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -152,10 +160,12 @@
     <main>
         <!-- Module 1: Research of the Day -->
         <section class="module" id="research-module">
-            <h2>Research of the Day</h2>
+            <h2>Research Paper of the Day</h2>
             <div class="brief-container">
                 <h3 id="brief-title">Loading...</h3>
-                <p id="brief-body">Please wait while we fetch today's insights.</p>
+                <div id="research-paper-content">
+                    <p id="brief-body">Please wait while we fetch today's insights.</p>
+                </div>
                 <small id="brief-source"></small>
             </div>
         </section>
@@ -177,8 +187,237 @@
         </section>
     </main>
 
-    <!-- This single script tag uses the modern "module" type -->
-    <script type="module" src="script.js"></script>
+    <!-- Firebase SDKs (Compatibility version) -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+
+    <!-- Embedded JavaScript -->
+    <script>
+        // --- Configuration ---
+        const GEMINI_API_KEY = ""; // This is handled by the environment
+        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyDeT_BSciMftq2Rx7Gzk63oP-DgNNslXME",
+          authDomain: "innerlabresearch.firebaseapp.com",
+          projectId: "innerlabresearch",
+          storageBucket: "innerlabresearch.appspot.com", 
+          messagingSenderId: "137996904547",
+          appId: "1:137996904547:web:9a1b86dc9aa41237fcb056",
+          measurementId: "G-VGVRLJSWPZ"
+        };
+        // ----------------------------------------------
+
+
+        // --- Global Variables ---
+        let db;
+        let currentDate;
+
+        // --- Initialize App ---
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                // Initialize Firebase using the compatibility library syntax
+                firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+
+                const dateSelector = document.getElementById('date-selector');
+                
+                const today = new Date();
+                const todayString = today.toISOString().split('T')[0];
+                
+                // Prevent selecting a future date
+                dateSelector.max = todayString;
+
+                // Prevent going back before the first use date
+                const creationDate = localStorage.getItem('appCreationDate');
+                if (creationDate) {
+                    dateSelector.min = creationDate;
+                }
+
+                dateSelector.value = todayString;
+                currentDate = todayString;
+                loadDataForDate(currentDate);
+
+                dateSelector.addEventListener('change', () => {
+                    currentDate = dateSelector.value;
+                    loadDataForDate(currentDate);
+                });
+
+                document.getElementById('save-journal-btn').addEventListener('click', saveJournal);
+
+            } catch (error) {
+                console.error("Initialization failed:", error);
+                showErrorState("Initialization failed. Check your firebaseConfig object.");
+            }
+        });
+
+        // --- Core Logic ---
+
+        async function loadDataForDate(dateString) {
+            showLoadingState();
+            // Use compatibility syntax for document reference
+            const docRef = db.collection('dailyEntries').doc(dateString);
+            
+            try {
+                const docSnap = await docRef.get();
+
+                if (docSnap.exists) { // Note: .exists is a property in v8/compat
+                    const data = docSnap.data();
+                    displayAllData(data);
+                } else {
+                    console.log(`No data for ${dateString}. Generating with AI...`);
+                    const [research, concepts] = await Promise.all([
+                        generateAiResearch(),
+                        generateAiCoreConcepts()
+                    ]);
+
+                    const newData = { research, concepts, journal: '' };
+                    await docRef.set(newData);
+                    
+                    // Set the creation date in localStorage on the first-ever generation
+                    if (!localStorage.getItem('appCreationDate')) {
+                        localStorage.setItem('appCreationDate', dateString);
+                        document.getElementById('date-selector').min = dateString;
+                    }
+                    
+                    console.log(`Data for ${dateString} saved to Firebase.`);
+                    displayAllData(newData);
+                }
+            } catch (error) {
+                console.error("Error loading or generating data:", error);
+                showErrorState(error.message);
+            }
+        }
+
+        async function saveJournal() {
+            const journalText = document.getElementById('journal-entry').value;
+            const saveButton = document.getElementById('save-journal-btn');
+            saveButton.disabled = true;
+            saveButton.textContent = 'Saving...';
+
+            const docRef = db.collection('dailyEntries').doc(currentDate);
+
+            try {
+                // Use .update for compatibility library
+                await docRef.update({ journal: journalText });
+                saveButton.textContent = 'Saved!';
+                setTimeout(() => { 
+                    saveButton.textContent = 'Save Journal';
+                    saveButton.disabled = false;
+                }, 2000);
+            } catch (error) {
+                console.error("Error saving journal:", error);
+                saveButton.textContent = 'Error - Retry';
+                saveButton.disabled = false;
+            }
+        }
+
+        // --- AI Generation Functions ---
+
+        async function generateAiResearch() {
+            const userPrompt = "Generate a 'Research Paper of the Day' summary about a key study or concept related to emotional regulation, relevant to ambitious professionals. The summary should be structured like a mini-paper with a compelling title, an 'introduction' (~150 words), 'keyFindings' (~200 words, can include paragraphs or bullet points), a 'conclusion' (~100 words), and a source.";
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                generationConfig: { responseMimeType: "application/json", responseSchema: { 
+                    type: "OBJECT", 
+                    properties: { 
+                        "title": { "type": "STRING" }, 
+                        "introduction": { "type": "STRING" }, 
+                        "keyFindings": { "type": "STRING" }, 
+                        "conclusion": { "type": "STRING" }, 
+                        "source": { "type": "STRING" } 
+                    } 
+                } }
+            };
+            const response = await fetch(GEMINI_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) throw new Error(`API call failed with status: ${response.status}`);
+            const result = await response.json();
+            return JSON.parse(result.candidates[0].content.parts[0].text);
+        }
+
+        async function generateAiCoreConcepts() {
+            const userPrompt = "Generate a list of exactly 3 essential core concepts related to CBT and performance psychology. For each, provide a 'term' and a concise 'definition'.";
+            const payload = {
+                contents: [{ parts: [{ text: userPrompt }] }],
+                generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { "term": { "type": "STRING" }, "definition": { "type": "STRING" } } } } }
+            };
+            const response = await fetch(GEMINI_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!response.ok) throw new Error(`API call failed with status: ${response.status}`);
+            const result = await response.json();
+            return JSON.parse(result.candidates[0].content.parts[0].text);
+        }
+
+
+        // --- DOM Update Functions ---
+
+        function displayAllData(data) {
+            displayResearch(data.research);
+            displayConcepts(data.concepts);
+            displayJournal(data.journal);
+        }
+
+        function displayResearch(research) {
+            document.getElementById('brief-title').textContent = research.title || "Title Not Available";
+            const contentEl = document.getElementById('research-paper-content');
+            
+            // Replaces newline characters from the AI with HTML paragraph tags for better formatting.
+            const formatContent = (text) => {
+                if (!text || text.trim() === '') {
+                    return 'Content for this section could not be generated.';
+                }
+                return text.replace(/\n/g, '</p><p>');
+            }
+
+            contentEl.innerHTML = `
+                <h4>Introduction</h4>
+                <p>${formatContent(research.introduction)}</p>
+                <h4>Key Findings</h4>
+                <p>${formatContent(research.keyFindings)}</p>
+                <h4>Conclusion</h4>
+                <p>${formatContent(research.conclusion)}</p>
+            `;
+            
+            document.getElementById('brief-source').textContent = `Source: ${research.source || 'N/A'}`;
+        }
+
+        function displayConcepts(concepts) {
+            const grid = document.getElementById('flashcard-grid');
+            grid.innerHTML = "";
+            if (concepts && concepts.length > 0) {
+                concepts.forEach(concept => {
+                    grid.appendChild(createFlashcard(concept));
+                });
+            } else {
+                grid.innerHTML = "<p>No concepts available.</p>";
+            }
+        }
+
+        function displayJournal(journalText) {
+            document.getElementById('journal-entry').value = journalText || '';
+        }
+
+        function createFlashcard(concept) {
+            const card = document.createElement('div');
+            card.className = 'flashcard';
+            card.innerHTML = `<div class="card-inner"><div class="card-face card-front"><h3>${concept.term}</h3></div><div class="card-face card-back"><p>${concept.definition}</p></div></div>`;
+            card.addEventListener('click', () => card.classList.toggle('is-flipped'));
+            return card;
+        }
+
+        function showLoadingState() {
+            document.getElementById('brief-title').textContent = "Loading...";
+            document.getElementById('research-paper-content').innerHTML = "<p>Fetching insights from our records or generating new ones with AI...</p>";
+            document.getElementById('brief-source').textContent = "";
+            document.getElementById('flashcard-grid').innerHTML = "<p>Loading concepts...</p>";
+            document.getElementById('journal-entry').value = "";
+        }
+
+        function showErrorState(message) {
+            document.getElementById('brief-title').textContent = "An Error Occurred";
+            document.getElementById('research-paper-content').innerHTML = `<p>Details: ${message || "Could not load or generate content. Please check the console for errors."}</p>`;
+            document.getElementById('flashcard-grid').innerHTML = "<p>Could not load concepts.</p>";
+        }
+    </script>
 </body>
 </html>
 
