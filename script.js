@@ -188,4 +188,3 @@ function showErrorState(message) {
     document.getElementById('brief-body').textContent = message || "Could not load or generate content. Please check the console for errors and try refreshing the page.";
     document.getElementById('flashcard-grid').innerHTML = "<p>Could not load concepts.</p>";
 }
-
