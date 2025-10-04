@@ -403,12 +403,8 @@
 
                 <!-- Workout Log -->
                 <div id="workoutLog" class="hidden">
-                    <div class="card">
-                        <input type="text" id="workoutNameInput" class="input" placeholder="Workout Name" style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
-                        <div id="exercisesList"></div>
-                        <button onclick="addExercise()" class="btn btn-secondary" style="margin-bottom: 12px;">+ Add Exercise</button>
-                        <button onclick="saveWorkout()" class="btn">Save Workout</button>
-                        <button onclick="clearWorkout()" class="btn btn-secondary" style="margin-top: 12px;">Cancel</button>
+                    <div class="card" id="workoutLogCard">
+                        <!-- JS will populate this -->
                     </div>
                 </div>
 
@@ -731,8 +727,7 @@
                 workoutName: '',
                 exercises: []
             };
-            document.getElementById('workoutNameInput').value = '';
-            renderWorkoutLog();
+            renderEditableWorkoutLog();
         };
 
         window.selectRestDay = async () => {
@@ -763,8 +758,7 @@
                     notes: ''
                 }))
             };
-            document.getElementById('workoutNameInput').value = template.name;
-            renderWorkoutLog();
+            renderEditableWorkoutLog();
         };
 
         window.loadWorkoutForDate = async () => {
@@ -788,8 +782,7 @@
                         document.getElementById('workoutSelection').classList.remove('hidden');
                         document.getElementById('workoutLog').classList.add('hidden');
                     } else {
-                        document.getElementById('workoutNameInput').value = window.currentWorkoutLog.workoutName;
-                        renderWorkoutLog();
+                        renderReadOnlyWorkoutLog();
                     }
                 } else {
                     window.currentWorkoutLog = null;
@@ -801,10 +794,68 @@
             }
         };
 
-        window.renderWorkoutLog = () => {
+        window.renderReadOnlyWorkoutLog = () => {
+            document.getElementById('workoutSelection').classList.add('hidden');
+            document.getElementById('workoutLog').classList.remove('hidden');
+
+            const card = document.getElementById('workoutLogCard');
+            
+            let exercisesHTML = '';
+            window.currentWorkoutLog.exercises.forEach(exercise => {
+                let setsHTML = '';
+                exercise.sets.forEach(set => {
+                    setsHTML += `
+                        <div class="set-row" style="grid-template-columns: 1fr 1fr 1fr 40px;">
+                            <div style="padding: 8px;">${set.sets || 1}</div>
+                            <div style="padding: 8px;">${set.reps || 0}</div>
+                            <div style="padding: 8px;">${set.weight || 0}</div>
+                            <div></div>
+                        </div>
+                    `;
+                });
+
+                exercisesHTML += `
+                    <div class="exercise-block">
+                        <p class="exercise-name-input" style="border: none; background: transparent; padding-left: 0;">${exercise.name}</p>
+                        <div class="set-header">
+                            <div>Sets</div>
+                            <div>Reps</div>
+                            <div>Weight</div>
+                            <div></div>
+                        </div>
+                        ${setsHTML}
+                `;
+                if (exercise.notes) {
+                    exercisesHTML += `<div style="padding: 8px; border: 1px solid #e5e5ea; border-radius: 8px; margin-top: 8px; background: #f9f9f9; white-space: pre-wrap;">${exercise.notes}</div>`;
+                }
+                exercisesHTML += `</div>`;
+            });
+
+            card.innerHTML = `
+                <h2 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">${window.currentWorkoutLog.workoutName}</h2>
+                <div id="exercisesList">${exercisesHTML}</div>
+                <div id="workoutActionButtons">
+                    <button onclick="renderEditableWorkoutLog()" class="btn">Edit Workout</button>
+                    <button onclick="clearWorkoutAndReturnToSelection()" class="btn btn-secondary" style="margin-top: 12px;">Log Different Workout</button>
+                </div>
+            `;
+        };
+        
+        window.renderEditableWorkoutLog = () => {
             document.getElementById('workoutSelection').classList.add('hidden');
             document.getElementById('workoutLog').classList.remove('hidden');
             
+            const card = document.getElementById('workoutLogCard');
+            card.innerHTML = `
+                <input type="text" id="workoutNameInput" class="input" placeholder="Workout Name" style="font-size: 22px; font-weight: 600; margin-bottom: 16px;" value="${window.currentWorkoutLog.workoutName || ''}">
+                <div id="exercisesList"></div>
+                <div id="workoutActionButtons">
+                    <button onclick="addExercise()" class="btn btn-secondary" style="margin-bottom: 12px;">+ Add Exercise</button>
+                    <button onclick="saveWorkout()" class="btn">Save Workout</button>
+                    <button onclick="cancelEdit()" class="btn btn-secondary" style="margin-top: 12px;">Cancel</button>
+                </div>
+            `;
+
             const exercisesList = document.getElementById('exercisesList');
             exercisesList.innerHTML = '';
             
@@ -853,13 +904,13 @@
                 sets: [{ sets: 1, reps: 0, weight: 0 }],
                 notes: ''
             });
-            renderWorkoutLog();
+            renderEditableWorkoutLog();
         };
 
         window.removeExercise = (index) => {
             if (confirm('Remove this exercise?')) {
                 window.currentWorkoutLog.exercises.splice(index, 1);
-                renderWorkoutLog();
+                renderEditableWorkoutLog();
             }
         };
 
@@ -873,13 +924,13 @@
 
         window.addSet = (exIndex) => {
             window.currentWorkoutLog.exercises[exIndex].sets.push({ sets: 1, reps: 0, weight: 0 });
-            renderWorkoutLog();
+            renderEditableWorkoutLog();
         };
 
         window.removeSet = (exIndex, setIndex) => {
             if (window.currentWorkoutLog.exercises[exIndex].sets.length > 1) {
                 window.currentWorkoutLog.exercises[exIndex].sets.splice(setIndex, 1);
-                renderWorkoutLog();
+                renderEditableWorkoutLog();
             }
         };
 
@@ -912,11 +963,19 @@
                 alert('Error saving workout: ' + error.message);
             }
         };
-
-        window.clearWorkout = () => {
+        
+        window.clearWorkoutAndReturnToSelection = () => {
             window.currentWorkoutLog = null;
             document.getElementById('workoutSelection').classList.remove('hidden');
             document.getElementById('workoutLog').classList.add('hidden');
+        };
+
+        window.cancelEdit = () => {
+            if (window.currentWorkoutLog && window.currentWorkoutLog.id) {
+                loadWorkoutForDate();
+            } else {
+                clearWorkoutAndReturnToSelection();
+            }
         };
 
         // Template Management
@@ -1133,3 +1192,4 @@
     </script>
 </body>
 </html>
+
