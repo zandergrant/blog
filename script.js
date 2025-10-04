@@ -1,106 +1,181 @@
-// --- Firebase Configuration ---
-// This is your specific configuration that connects to YOUR project.
+// --- Configuration ---
+const GEMINI_API_KEY = ""; // Handled by the environment
+const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+
+// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDeT_BSciMftq2Rx7Gzk63oP-DgNNslXME",
   authDomain: "innerlabresearch.firebaseapp.com",
   projectId: "innerlabresearch",
-  storageBucket: "innerlabresearch.firebasestorage.app", // Note: The correct property is storageBucket, not firebasestorage.app
+  storageBucket: "innerlabresearch.appspot.com", // Corrected from .firebasestorage.app to .appspot.com
   messagingSenderId: "137996904547",
-  appId: "1:137996904547:web:9a1b86dc9aa41237fcb056",
+  appId: "1:137996_9_04547:web:9a1b86dc9aa41237fcb056",
   measurementId: "G-VGVRLJSWPZ"
 };
+// ----------------------------------------------
 
-// --- Initialize Firebase ---
-// This uses the "compat" library loaded in your index.html
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
 
-// --- Main Function: Run when the page content is loaded ---
+// --- Global Variables ---
+let db;
+let currentDate;
+
+// --- Initialize App ---
 document.addEventListener('DOMContentLoaded', () => {
-    fetchDailyResearch();
-    fetchCoreConcepts();
+    try {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+
+        const dateSelector = document.getElementById('date-selector');
+        
+        // Set today's date and load data
+        const today = new Date();
+        const todayString = today.toISOString().split('T')[0]; // YYYY-MM-DD format
+        dateSelector.value = todayString;
+        currentDate = todayString;
+        loadDataForDate(currentDate);
+
+        // Event Listeners
+        dateSelector.addEventListener('change', () => {
+            currentDate = dateSelector.value;
+            loadDataForDate(currentDate);
+        });
+
+        document.getElementById('save-journal-btn').addEventListener('click', saveJournal);
+    } catch (error) {
+        console.error("Firebase initialization failed:", error);
+        showErrorState("Firebase initialization failed. Please check your firebaseConfig object in script.js.");
+    }
 });
 
-// --- Module 1: Research of the Day ---
-function fetchDailyResearch() {
-    const briefTitle = document.getElementById('brief-title');
-    const briefBody = document.getElementById('brief-body');
-    const briefSource = document.getElementById('brief-source');
+// --- Core Logic ---
 
-    // Get today's date at the start of the day for comparison
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+async function loadDataForDate(dateString) {
+    showLoadingState();
+    const docRef = db.collection('dailyEntries').doc(dateString);
+    
+    try {
+        const docSnap = await docRef.get();
 
-    db.collection("dailyResearch")
-      .where("date", ">=", today) // Fetch briefs for today or any future date
-      .orderBy("date") // Ensure the earliest one is first
-      .limit(1) // We only want one
-      .get()
-      .then((querySnapshot) => {
-        if (querySnapshot.empty) {
-            briefTitle.textContent = "No Brief for Today";
-            briefBody.textContent = "Please check back later or add a new research item in the database.";
-            return;
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            displayResearch(data.research);
+            displayConcepts(data.concepts);
+            displayJournal(data.journal);
+        } else {
+            console.log(`No data for ${dateString}. Generating with AI...`);
+            const [research, concepts] = await Promise.all([
+                generateAiResearch(),
+                generateAiCoreConcepts()
+            ]);
+
+            const newData = {
+                research: research,
+                concepts: concepts,
+                journal: '' 
+            };
+
+            await docRef.set(newData);
+            console.log(`Data for ${dateString} saved to Firebase.`);
+
+            displayResearch(newData.research);
+            displayConcepts(newData.concepts);
+            displayJournal(newData.journal);
         }
-        querySnapshot.forEach((doc) => {
-            const research = doc.data();
-            briefTitle.textContent = research.title;
-            briefBody.textContent = research.brief;
-            briefSource.textContent = `Source: ${research.source}`;
-        });
-      })
-      .catch((error) => {
-        console.error("Error getting daily research: ", error);
-        briefTitle.textContent = "Error Loading Brief";
-        briefBody.textContent = "Could not connect to the database. Check your Firebase config and Firestore rules.";
-      });
+    } catch (error) {
+        console.error("Error loading or generating data:", error);
+        showErrorState("Could not load data from the database. Please check Firestore rules and network connection.");
+    }
 }
 
-// --- Module 2: Core Concepts (Flashcards) ---
-function fetchCoreConcepts() {
+async function saveJournal() {
+    const journalText = document.getElementById('journal-entry').value;
+    const saveButton = document.getElementById('save-journal-btn');
+    saveButton.textContent = 'Saving...';
+
+    const docRef = db.collection('dailyEntries').doc(currentDate);
+
+    try {
+        await docRef.update({ journal: journalText });
+        saveButton.textContent = 'Saved!';
+        setTimeout(() => { saveButton.textContent = 'Save Journal'; }, 2000);
+    } catch (error) {
+        console.error("Error saving journal:", error);
+        saveButton.textContent = 'Error - Retry';
+    }
+}
+
+
+// --- AI Generation Functions ---
+
+async function generateAiResearch() {
+    const userPrompt = "Generate a 'Research of the Day' brief about a key study or concept related to emotional regulation. The topic must be relevant to ambitious professionals in high-pressure environments. Provide a compelling title, a concise brief (2-3 sentences), and a source (e.g., an academic paper or book).";
+    const payload = {
+        contents: [{ parts: [{ text: userPrompt }] }],
+        generationConfig: { responseMimeType: "application/json", responseSchema: { type: "OBJECT", properties: { "title": { "type": "STRING" }, "brief": { "type": "STRING" }, "source": { "type": "STRING" } } } }
+    };
+    const response = await fetch(GEMINI_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!response.ok) throw new Error(`API call failed with status: ${response.status}`);
+    const result = await response.json();
+    return JSON.parse(result.candidates[0].content.parts[0].text);
+}
+
+async function generateAiCoreConcepts() {
+    const userPrompt = "Generate a list of exactly 5 essential core concepts related to CBT and performance psychology. For each concept, provide a 'term' and a concise 'definition' suitable for a flashcard.";
+    const payload = {
+        contents: [{ parts: [{ text: userPrompt }] }],
+        generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { "term": { "type": "STRING" }, "definition": { "type": "STRING" } } } } }
+    };
+    const response = await fetch(GEMINI_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!response.ok) throw new Error(`API call failed with status: ${response.status}`);
+    const result = await response.json();
+    return JSON.parse(result.candidates[0].content.parts[0].text);
+}
+
+
+// --- DOM Update Functions ---
+
+function displayResearch(research) {
+    document.getElementById('brief-title').textContent = research.title;
+    document.getElementById('brief-body').textContent = research.brief;
+    document.getElementById('brief-source').textContent = `Source: ${research.source}`;
+}
+
+function displayConcepts(concepts) {
     const grid = document.getElementById('flashcard-grid');
-    
-    db.collection("coreConcepts")
-      .get()
-      .then((querySnapshot) => {
-        if (querySnapshot.empty) {
-            grid.innerHTML = "<p>No core concepts found in the database.</p>";
-            return;
-        }
-        // Clear any loading text before adding cards
-        grid.innerHTML = ""; 
-        querySnapshot.forEach((doc) => {
-            const concept = doc.data();
+    grid.innerHTML = ""; // Clear previous concepts
+    if (concepts && concepts.length > 0) {
+        concepts.forEach(concept => {
             const card = createFlashcard(concept);
             grid.appendChild(card);
         });
-      })
-      .catch((error) => {
-        console.error("Error getting core concepts: ", error);
-        grid.innerHTML = "<p>Error loading concepts. Could not connect to the database.</p>";
-      });
+    } else {
+        grid.innerHTML = "<p>No concepts available.</p>";
+    }
+}
+
+function displayJournal(journalText) {
+    document.getElementById('journal-entry').value = journalText || '';
 }
 
 function createFlashcard(concept) {
     const card = document.createElement('div');
     card.className = 'flashcard';
-
-    // Using innerHTML to easily structure the card faces
-    card.innerHTML = `
-        <div class="card-inner">
-            <div class="card-face card-front">
-                <h3>${concept.term}</h3>
-            </div>
-            <div class="card-face card-back">
-                <p>${concept.definition}</p>
-            </div>
-        </div>
-    `;
-
-    // Add click event listener to flip the card
-    card.addEventListener('click', () => {
-        card.classList.toggle('is-flipped');
-    });
-
+    card.innerHTML = `<div class="card-inner"><div class="card-face card-front"><h3>${concept.term}</h3></div><div class="card-face card-back"><p>${concept.definition}</p></div></div>`;
+    card.addEventListener('click', () => card.classList.toggle('is-flipped'));
     return card;
 }
+
+function showLoadingState() {
+    document.getElementById('brief-title').textContent = "Loading...";
+    document.getElementById('brief-body').textContent = "Fetching today's insights from our records or generating new ones with AI...";
+    document.getElementById('brief-source').textContent = "";
+    document.getElementById('flashcard-grid').innerHTML = "<p>Loading concepts...</p>";
+    document.getElementById('journal-entry').value = "";
+}
+
+function showErrorState(message) {
+    document.getElementById('brief-title').textContent = "An Error Occurred";
+    document.getElementById('brief-body').textContent = message || "Could not load or generate content. Please check the console for errors and try refreshing the page.";
+    document.getElementById('flashcard-grid').innerHTML = "<p>Could not load concepts.</p>";
+}
+
