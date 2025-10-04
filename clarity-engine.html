@@ -7,7 +7,7 @@
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
 
     <!-- Internal CSS -->
@@ -19,48 +19,51 @@
             line-height: 1.6;
             margin: 0;
             padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-
+        .date-container {
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 20px;
+            text-align: center;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 30, 80, 0.05);
+        }
+        .date-container label {
+            font-weight: 600;
+            margin-right: 10px;
+        }
+        #date-selector {
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #dde3e8;
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+        }
         header {
             text-align: center;
-            margin-bottom: 20px;
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 40px;
+            border-bottom: 1px solid #dde3e8;
             padding-bottom: 20px;
         }
-
         header h1 {
             font-family: 'Source Serif 4', serif;
             font-weight: 600;
             color: #1a2533;
             font-size: 2.5rem;
-            margin-bottom: 0.5rem;
+            margin: 0;
         }
-        
-        .date-selector-container {
-            text-align: center;
-            margin-bottom: 40px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid #dde3e8;
-        }
-
-        .date-selector-container label {
-            font-weight: 600;
-            margin-right: 10px;
-            color: #0a2d4d;
-        }
-
-        #date-selector {
-            font-family: 'Inter', sans-serif;
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid #dde3e8;
-            font-size: 1rem;
-        }
-
         main {
+            width: 100%;
             max-width: 900px;
             margin: 0 auto;
         }
-
         .module {
             background-color: #ffffff;
             border-radius: 8px;
@@ -68,7 +71,6 @@
             padding: 25px;
             margin-bottom: 30px;
         }
-
         .module h2 {
             font-family: 'Inter', sans-serif;
             font-weight: 600;
@@ -77,32 +79,14 @@
             border-bottom: 2px solid #e0f7fa;
             padding-bottom: 10px;
         }
-
-        /* Research Brief Styles */
-        .brief-container h3 {
-            font-size: 1.4rem;
-            color: #0a2d4d;
-            margin-bottom: 10px;
-        }
-
-        .brief-container p {
-            font-size: 1rem;
-            margin-bottom: 15px;
-        }
-
-        .brief-container small {
-            font-style: italic;
-            color: #6c757d;
-        }
-
-        /* Flashcard Styles */
+        .brief-container h3 { font-size: 1.4rem; color: #0a2d4d; margin-bottom: 10px; }
+        .brief-container p { font-size: 1rem; margin-bottom: 15px; }
+        .brief-container small { font-style: italic; color: #6c757d; }
         .flashcard-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 20px;
-            min-height: 50px;
         }
-
         .flashcard {
             background-color: #f8f9fa;
             border: 1px solid #dee2e6;
@@ -110,94 +94,57 @@
             padding: 20px;
             cursor: pointer;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
-            perspective: 1000px; /* For 3D flip effect */
+            perspective: 1000px;
         }
-
-        .flashcard:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0, 30, 80, 0.1);
-        }
-
+        .flashcard:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 30, 80, 0.1); }
         .flashcard .card-inner {
             position: relative;
             width: 100%;
             height: 100%;
+            min-height: 100px;
             transition: transform 0.6s;
             transform-style: preserve-3d;
         }
-
-        .flashcard.is-flipped .card-inner {
-            transform: rotateY(180deg);
-        }
-
+        .flashcard.is-flipped .card-inner { transform: rotateY(180deg); }
         .card-face {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
+            position: absolute; width: 100%; height: 100%;
+            -webkit-backface-visibility: hidden; backface-visibility: hidden;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
         }
-
-        .card-front h3 {
-            margin: 0;
-            font-size: 1.2rem;
-            color: #0077b6;
-        }
-
-        .card-back {
-            transform: rotateY(180deg);
-        }
-
-        .card-back p {
-            font-size: 0.9rem;
-            margin: 0;
-        }
-
-        /* Journal Styles */
+        .card-front h3 { margin: 0; font-size: 1.2rem; color: #0077b6; }
+        .card-back { transform: rotateY(180deg); }
+        .card-back p { font-size: 0.9rem; margin: 0; }
         #journal-entry {
             width: 100%;
-            min-height: 200px;
+            min-height: 150px;
+            padding: 10px;
             border-radius: 6px;
             border: 1px solid #dde3e8;
-            padding: 15px;
             font-family: 'Inter', sans-serif;
             font-size: 1rem;
-            line-height: 1.6;
             resize: vertical;
         }
-
         #save-journal-btn {
-            display: block;
-            margin-top: 15px;
-            padding: 10px 20px;
-            font-family: 'Inter', sans-serif;
-            font-weight: 600;
-            font-size: 1rem;
-            border: none;
-            border-radius: 6px;
             background-color: #0077b6;
             color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
             cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
             transition: background-color 0.2s;
+            margin-top: 10px;
         }
-
-        #save-journal-btn:hover {
-            background-color: #005f73;
-        }
+        #save-journal-btn:hover { background-color: #005f73; }
     </style>
 </head>
 <body>
     <header>
         <h1>The Inner Lab Method</h1>
-        <p>A proactive practice for a centered response.</p>
     </header>
     
-    <div class="date-selector-container">
+    <div class="date-container">
         <label for="date-selector">Select a Day:</label>
         <input type="date" id="date-selector">
     </div>
@@ -208,7 +155,7 @@
             <h2>Research of the Day</h2>
             <div class="brief-container">
                 <h3 id="brief-title">Loading...</h3>
-                <p id="brief-body"></p>
+                <p id="brief-body">Please wait while we fetch today's insights.</p>
                 <small id="brief-source"></small>
             </div>
         </section>
@@ -224,16 +171,14 @@
         <!-- Module 3: Synthesis Journal -->
         <section class="module" id="journal-module">
             <h2>Synthesis Journal</h2>
-            <textarea id="journal-entry" placeholder="Synthesize today's topics here. What connections can you make? How can you apply this?"></textarea>
+            <p>Synthesize today's topics here. What connections can you make? How can you apply this?</p>
+            <textarea id="journal-entry" placeholder="Your thoughts..."></textarea>
             <button id="save-journal-btn">Save Journal</button>
         </section>
     </main>
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
-    
-    <!-- Your custom script -->
-    <script src="script.js"></script>
+    <!-- CORRECTED SCRIPT TAG: Added type="module" -->
+    <script type="module" src="script.js"></script>
 </body>
 </html>
+
