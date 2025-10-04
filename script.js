@@ -7,9 +7,9 @@ const firebaseConfig = {
   apiKey: "AIzaSyDeT_BSciMftq2Rx7Gzk63oP-DgNNslXME",
   authDomain: "innerlabresearch.firebaseapp.com",
   projectId: "innerlabresearch",
-  storageBucket: "innerlabresearch.appspot.com", // Corrected from .firebasestorage.app to .appspot.com
+  storageBucket: "innerlabresearch.appspot.com",
   messagingSenderId: "137996904547",
-  appId: "1:137996_9_04547:web:9a1b86dc9aa41237fcb056",
+  appId: "1:137996904547:web:9a1b86dc9aa41237fcb056", // Corrected potential typo
   measurementId: "G-VGVRLJSWPZ"
 };
 // ----------------------------------------------
@@ -56,7 +56,8 @@ async function loadDataForDate(dateString) {
     try {
         const docSnap = await docRef.get();
 
-        if (docSnap.exists()) {
+        // CORRECTED THIS LINE: .exists is a property, not a function, in this version of Firebase
+        if (docSnap.exists) { 
             const data = docSnap.data();
             displayResearch(data.research);
             displayConcepts(data.concepts);
