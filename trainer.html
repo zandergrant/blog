@@ -321,6 +321,7 @@
     </style>
 </head>
 <body>
+    <!-- Auth Section -->
     <div id="authSection">
         <div class="container">
             <h1>Lacrosse Trainer</h1>
@@ -335,7 +336,9 @@
         </div>
     </div>
 
+    <!-- Main App Section -->
     <div id="appSection" class="hidden">
+        <!-- Athletes List View -->
         <div id="athletesView">
             <div class="container">
                 <div class="header-flex">
@@ -348,6 +351,7 @@
             </div>
         </div>
 
+        <!-- Add Athlete View -->
         <div id="addAthleteView" class="hidden">
             <div class="container">
                 <button onclick="showAthletesView()" class="back-btn">← Back</button>
@@ -359,11 +363,13 @@
             </div>
         </div>
 
+        <!-- Workout View -->
         <div id="workoutView" class="hidden">
             <div class="container">
                 <button onclick="showAthletesView()" class="back-btn">← Athletes</button>
                 <h1 id="athleteNameTitle"></h1>
                 
+                <!-- Progress Chart -->
                 <div class="card">
                     <h2>Progress</h2>
                     <div class="chart-controls">
@@ -380,6 +386,7 @@
                     <button onclick="loadWorkoutForDate()" class="btn btn-small">View</button>
                 </div>
                 
+                <!-- Workout Selection -->
                 <div id="workoutSelection">
                     <h2>Select a Workout</h2>
                     <button onclick="selectNewWorkout()" class="workout-option">
@@ -394,6 +401,7 @@
                     <button onclick="showAddTemplate()" class="btn btn-secondary" style="margin-top: 12px;">+ Add New Template</button>
                 </div>
 
+                <!-- Workout Log -->
                 <div id="workoutLog" class="hidden">
                     <div class="card">
                         <input type="text" id="workoutNameInput" class="input" placeholder="Workout Name" style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">
@@ -404,6 +412,7 @@
                     </div>
                 </div>
 
+                <!-- AI Review Section -->
                 <div class="card">
                     <h2>AI Review</h2>
                     <button onclick="generateAIReview()" class="btn">Generate AI Review</button>
@@ -412,6 +421,7 @@
             </div>
         </div>
 
+        <!-- Template Editor -->
         <div id="templateEditor" class="hidden">
             <div class="container">
                 <button onclick="cancelTemplateEdit()" class="back-btn">← Back</button>
@@ -427,29 +437,33 @@
         </div>
     </div>
 
+    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAnalytics } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js';
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, doc, setDoc, getDoc, updateDoc, deleteDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-        // --- SECURITY WARNING ---
-        // Exposing API keys in client-side code is a security risk.
-        // Use environment variables with a build process or a backend function
-        // to protect your credentials.
+        // Your web app's Firebase configuration
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyBf9M5uvWGnspLTY-I9bx15JascZVEdMAg",
+            authDomain: "trainer-1983d.firebaseapp.com",
+            projectId: "trainer-1983d",
+            storageBucket: "trainer-1983d.firebasestorage.app",
+            messagingSenderId: "675434748399",
+            appId: "1:675434748399:web:81e661aab7a1219b7fbe1a",
+            measurementId: "G-RX809VR6LB"
         };
         
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+
         // --- SECURITY WARNING ---
-        // Your Gemini API Key should also be secured.
+        // Your Gemini API Key should also be secured. For now, it is hardcoded.
+        // Replace with your actual key or implement a secure way to handle it.
         window.GEMINI_API_KEY = "YOUR_GEMINI_API_KEY";
 
-        const app = initializeApp(firebaseConfig);
         window.auth = getAuth(app);
         window.db = getFirestore(app);
 
@@ -1065,6 +1079,10 @@
             reviewContent.innerHTML = '<div class="loading">Generating AI review...</div>';
             
             try {
+                if (!window.GEMINI_API_KEY || window.GEMINI_API_KEY === "YOUR_GEMINI_API_KEY") {
+                    throw new Error("Gemini API Key is not configured.");
+                }
+
                 const q = query(
                     collection(window.db, 'workoutLogs'),
                     where('athleteId', '==', window.selectedAthlete.id),
@@ -1099,12 +1117,17 @@
                     })
                 });
 
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error.message || 'Failed to fetch AI review.');
+                }
+
                 const data = await response.json();
                 const aiText = data.candidates[0].content.parts[0].text;
                 
                 reviewContent.innerHTML = `<div class="ai-review">${aiText}</div>`;
             } catch (error) {
-                reviewContent.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+                reviewContent.innerHTML = `<p class="error">Error generating review: ${error.message}</p>`;
             }
         };
     </script>
