@@ -958,7 +958,8 @@
                     });
                 }
                 alert('Workout saved successfully!');
-                showAthletesView();
+                await loadWorkoutForDate();
+                await loadProgressChart();
             } catch (error) {
                 alert('Error saving workout: ' + error.message);
             }
