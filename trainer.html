@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lacrosse Trainer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f2f2f7;
+            color: #000;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            font-size: 34px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 17px;
+            color: #8e8e93;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .btn {
+            background: #007aff;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 14px 20px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.8;
+        }
+
+        .btn-secondary {
+            background: #fff;
+            color: #007aff;
+            border: 1px solid #007aff;
+        }
+
+        .btn-small {
+            padding: 10px 16px;
+            font-size: 15px;
+            width: auto;
+        }
+
+        .input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #c7c7cc;
+            font-size: 17px;
+            margin-bottom: 12px;
+            background: #fff;
+        }
+
+        .athlete-item {
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            border: none;
+            width: 100%;
+            text-align: left;
+        }
+
+        .athlete-item:hover {
+            transform: scale(1.01);
+        }
+
+        .athlete-name {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .athlete-email {
+            font-size: 15px;
+            color: #8e8e93;
+        }
+
+        .exercise-block {
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #f2f2f7;
+        }
+
+        .exercise-name {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .exercise-inputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .input-group label {
+            font-size: 13px;
+            color: #8e8e93;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #e5e5ea;
+            font-size: 17px;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border-radius: 8px;
+            border: 1px solid #e5e5ea;
+            font-size: 15px;
+            min-height: 60px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: #007aff;
+            font-size: 17px;
+            cursor: pointer;
+            margin-bottom: 16px;
+            padding: 0;
+        }
+
+        .workout-option {
+            background: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            font-size: 17px;
+            font-weight: 500;
+            color: #007aff;
+            width: 100%;
+            text-align: left;
+        }
+
+        .workout-option:hover {
+            background: #f2f2f7;
+        }
+
+        .ai-review {
+            white-space: pre-wrap;
+            line-height: 1.6;
+            color: #000;
+        }
+
+        .header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .loading {
+            text-align: center;
+            color: #8e8e93;
+            padding: 20px;
+        }
+
+        #authSection {
+            max-width: 400px;
+            margin: 100px auto;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .error {
+            background: #ff3b30;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .success {
+            background: #34c759;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Auth Section -->
+    <div id="authSection">
+        <div class="container">
+            <h1>Lacrosse Trainer</h1>
+            <p class="subtitle">Sign in to continue</p>
+            <div class="card">
+                <div id="authMessage"></div>
+                <input type="email" id="emailInput" class="input" placeholder="Email">
+                <input type="password" id="passwordInput" class="input" placeholder="Password">
+                <button onclick="signIn()" class="btn">Sign In</button>
+                <button onclick="signUp()" class="btn btn-secondary" style="margin-top: 12px;">Create Account</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Section -->
+    <div id="appSection" class="hidden">
+        <!-- Athletes List View -->
+        <div id="athletesView">
+            <div class="container">
+                <div class="header-flex">
+                    <h1>Athletes</h1>
+                    <button onclick="auth.signOut()" class="btn btn-small btn-secondary">Sign Out</button>
+                </div>
+                <p class="subtitle">Select an athlete to view workouts</p>
+                <button onclick="showAddAthlete()" class="btn btn-secondary" style="margin-bottom: 20px;">+ Add Athlete</button>
+                <div id="athletesList"></div>
+            </div>
+        </div>
+
+        <!-- Add Athlete View -->
+        <div id="addAthleteView" class="hidden">
+            <div class="container">
+                <button onclick="showAthletesView()" class="back-btn">← Back</button>
+                <h1>Add Athlete</h1>
+                <div class="card">
+                    <input type="text" id="athleteName" class="input" placeholder="Athlete Name">
+                    <input type="email" id="athleteEmail" class="input" placeholder="Athlete Email">
+                    <button onclick="addAthlete()" class="btn">Add Athlete</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Workout View -->
+        <div id="workoutView" class="hidden">
+            <div class="container">
+                <button onclick="showAthletesView()" class="back-btn">← Athletes</button>
+                <h1 id="athleteNameTitle"></h1>
+                <input type="date" id="dateInput" class="input" style="max-width: 200px; margin-bottom: 24px;">
+                
+                <!-- Workout Selection -->
+                <div id="workoutSelection">
+                    <h2 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">Select Workout</h2>
+                    <div id="workoutTemplates"></div>
+                </div>
+
+                <!-- Workout Log -->
+                <div id="workoutLog" class="hidden">
+                    <div class="card">
+                        <h2 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;" id="workoutTitle"></h2>
+                        <div id="exercisesList"></div>
+                        <button onclick="saveWorkout()" class="btn">Save Workout</button>
+                        <button onclick="clearWorkout()" class="btn btn-secondary" style="margin-top: 12px;">Select Different Workout</button>
+                    </div>
+                </div>
+
+                <!-- AI Review Section -->
+                <div class="card">
+                    <div class="header-flex">
+                        <h2 style="font-size: 22px; font-weight: 600; margin: 0;">AI Review</h2>
+                        <button onclick="togglePromptEditor()" class="btn btn-small btn-secondary">Edit Prompt</button>
+                    </div>
+                    
+                    <div id="promptEditor" class="hidden" style="margin: 16px 0;">
+                        <textarea id="aiPromptText" style="min-height: 120px; margin-bottom: 8px;"></textarea>
+                        <button onclick="savePrompt()" class="btn" style="background: #34c759;">Save Prompt</button>
+                    </div>
+
+                    <button onclick="generateAIReview()" class="btn" style="margin-top: 16px;">Generate AI Review</button>
+                    <div id="aiReviewContent" style="margin-top: 16px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, doc, setDoc, getDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // Firebase Configuration - REPLACE WITH YOUR CONFIG
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        window.auth = getAuth(app);
+        window.db = getFirestore(app);
+
+        // Global variables
+        window.currentUser = null;
+        window.selectedAthlete = null;
+        window.currentWorkoutLog = null;
+        window.aiPrompt = "Analyze this athlete's performance based on their workout logs. Include: 1) Total workouts completed, 2) Weight progression trends, 3) Summary of their notes/comments, 4) Specific suggestions for improvement. Keep it concise and motivating.";
+        
+        // Gemini API Key - REPLACE WITH YOUR KEY
+        window.GEMINI_API_KEY = "YOUR_GEMINI_API_KEY";
+
+        // Auth state observer
+        onAuthStateChanged(window.auth, async (user) => {
+            if (user) {
+                window.currentUser = user;
+                document.getElementById('authSection').classList.add('hidden');
+                document.getElementById('appSection').classList.remove('hidden');
+                await loadAIPrompt();
+                showAthletesView();
+            } else {
+                window.currentUser = null;
+                document.getElementById('authSection').classList.remove('hidden');
+                document.getElementById('appSection').classList.add('hidden');
+            }
+        });
+
+        // Make functions available globally
+        window.signIn = async () => {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            try {
+                await signInWithEmailAndPassword(window.auth, email, password);
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        };
+
+        window.signUp = async () => {
+            const email = document.getElementById('emailInput').value;
+            const password = document.getElementById('passwordInput').value;
+            try {
+                await createUserWithEmailAndPassword(window.auth, email, password);
+                showMessage('Account created successfully!', 'success');
+            } catch (error) {
+                showMessage('Error: ' + error.message, 'error');
+            }
+        };
+
+        window.showAthletesView = async () => {
+            document.getElementById('athletesView').classList.remove('hidden');
+            document.getElementById('addAthleteView').classList.add('hidden');
+            document.getElementById('workoutView').classList.add('hidden');
+            await loadAthletes();
+        };
+
+        window.showAddAthlete = () => {
+            document.getElementById('athletesView').classList.add('hidden');
+            document.getElementById('addAthleteView').classList.remove('hidden');
+        };
+
+        window.addAthlete = async () => {
+            const name = document.getElementById('athleteName').value;
+            const email = document.getElementById('athleteEmail').value;
+            
+            if (!name || !email) {
+                alert('Please fill in all fields');
+                return;
+            }
+
+            try {
+                await addDoc(collection(window.db, 'athletes'), {
+                    name,
+                    email,
+                    userId: window.currentUser.uid,
+                    createdAt: new Date()
+                });
+                document.getElementById('athleteName').value = '';
+                document.getElementById('athleteEmail').value = '';
+                showAthletesView();
+            } catch (error) {
+                alert('Error adding athlete: ' + error.message);
+            }
+        };
+
+        window.loadAthletes = async () => {
+            const athletesList = document.getElementById('athletesList');
+            athletesList.innerHTML = '<div class="loading">Loading athletes...</div>';
+            
+            try {
+                const q = query(collection(window.db, 'athletes'), where('userId', '==', window.currentUser.uid));
+                const querySnapshot = await getDocs(q);
+                
+                if (querySnapshot.empty) {
+                    athletesList.innerHTML = '<p class="subtitle">No athletes yet. Add your first athlete!</p>';
+                    return;
+                }
+
+                athletesList.innerHTML = '';
+                querySnapshot.forEach((doc) => {
+                    const athlete = { id: doc.id, ...doc.data() };
+                    const btn = document.createElement('button');
+                    btn.className = 'athlete-item';
+                    btn.innerHTML = `
+                        <div class="athlete-name">${athlete.name}</div>
+                        <div class="athlete-email">${athlete.email}</div>
+                    `;
+                    btn.onclick = () => selectAthlete(athlete);
+                    athletesList.appendChild(btn);
+                });
+            } catch (error) {
+                athletesList.innerHTML = '<p class="error">Error loading athletes</p>';
+            }
+        };
+
+        window.selectAthlete = async (athlete) => {
+            window.selectedAthlete = athlete;
+            document.getElementById('athleteNameTitle').textContent = athlete.name;
+            document.getElementById('dateInput').value = new Date().toISOString().split('T')[0];
+            document.getElementById('athletesView').classList.add('hidden');
+            document.getElementById('workoutView').classList.remove('hidden');
+            await loadWorkoutTemplates();
+            await loadWorkoutForDate();
+        };
+
+        window.loadWorkoutTemplates = async () => {
+            const templates = document.getElementById('workoutTemplates');
+            
+            // Default templates
+            const workouts = [
+                {
+                    name: 'Upper Body Strength',
+                    exercises: [
+                        { name: 'Bench Press', sets: 3, reps: 10, weight: 135 },
+                        { name: 'Shoulder Press', sets: 3, reps: 8, weight: 95 },
+                        { name: 'Pull-ups', sets: 3, reps: 12, weight: 0 }
+                    ]
+                },
+                {
+                    name: 'Lower Body Power',
+                    exercises: [
+                        { name: 'Back Squat', sets: 4, reps: 8, weight: 185 },
+                        { name: 'Romanian Deadlift', sets: 3, reps: 10, weight: 155 },
+                        { name: 'Box Jumps', sets: 3, reps: 10, weight: 0 }
+                    ]
+                },
+                {
+                    name: 'Full Body Conditioning',
+                    exercises: [
+                        { name: 'Kettlebell Swings', sets: 4, reps: 15, weight: 50 },
+                        { name: 'Burpees', sets: 3, reps: 15, weight: 0 },
+                        { name: 'Medicine Ball Slams', sets: 3, reps: 20, weight: 20 }
+                    ]
+                }
+            ];
+
+            templates.innerHTML = '';
+            workouts.forEach(workout => {
+                const btn = document.createElement('button');
+                btn.className = 'workout-option';
+                btn.textContent = workout.name;
+                btn.onclick = () => selectWorkoutTemplate(workout);
+                templates.appendChild(btn);
+            });
+        };
+
+        window.selectWorkoutTemplate = (workout) => {
+            window.currentWorkoutLog = {
+                athleteId: window.selectedAthlete.id,
+                date: document.getElementById('dateInput').value,
+                workoutName: workout.name,
+                exercises: workout.exercises.map(ex => ({...ex, notes: ''}))
+            };
+            renderWorkoutLog();
+        };
+
+        window.loadWorkoutForDate = async () => {
+            const date = document.getElementById('dateInput').value;
+            const q = query(
+                collection(window.db, 'workoutLogs'),
+                where('athleteId', '==', window.selectedAthlete.id),
+                where('date', '==', date)
+            );
+            
+            const querySnapshot = await getDocs(q);
+            if (!querySnapshot.empty) {
+                const doc = querySnapshot.docs[0];
+                window.currentWorkoutLog = { id: doc.id, ...doc.data() };
+                renderWorkoutLog();
+            } else {
+                window.currentWorkoutLog = null;
+                document.getElementById('workoutSelection').classList.remove('hidden');
+                document.getElementById('workoutLog').classList.add('hidden');
+            }
+        };
+
+        window.renderWorkoutLog = () => {
+            document.getElementById('workoutSelection').classList.add('hidden');
+            document.getElementById('workoutLog').classList.remove('hidden');
+            document.getElementById('workoutTitle').textContent = window.currentWorkoutLog.workoutName;
+            
+            const exercisesList = document.getElementById('exercisesList');
+            exercisesList.innerHTML = '';
+            
+            window.currentWorkoutLog.exercises.forEach((exercise, index) => {
+                const div = document.createElement('div');
+                div.className = 'exercise-block';
+                div.innerHTML = `
+                    <div class="exercise-name">${exercise.name}</div>
+                    <div class="exercise-inputs">
+                        <div class="input-group">
+                            <label>Sets</label>
+                            <input type="number" value="${exercise.sets}" onchange="updateExercise(${index}, 'sets', this.value)">
+                        </div>
+                        <div class="input-group">
+                            <label>Reps</label>
+                            <input type="number" value="${exercise.reps}" onchange="updateExercise(${index}, 'reps', this.value)">
+                        </div>
+                        <div class="input-group">
+                            <label>Weight</label>
+                            <input type="number" value="${exercise.weight}" onchange="updateExercise(${index}, 'weight', this.value)">
+                        </div>
+                    </div>
+                    <textarea placeholder="Notes..." onchange="updateExercise(${index}, 'notes', this.value)">${exercise.notes || ''}</textarea>
+                `;
+                exercisesList.appendChild(div);
+            });
+        };
+
+        window.updateExercise = (index, field, value) => {
+            window.currentWorkoutLog.exercises[index][field] = field === 'notes' ? value : parseInt(value);
+        };
+
+        window.saveWorkout = async () => {
+            try {
+                if (window.currentWorkoutLog.id) {
+                    await updateDoc(doc(window.db, 'workoutLogs', window.currentWorkoutLog.id), window.currentWorkoutLog);
+                } else {
+                    const docRef = await addDoc(collection(window.db, 'workoutLogs'), {
+                        ...window.currentWorkoutLog,
+                        userId: window.currentUser.uid,
+                        createdAt: new Date()
+                    });
+                    window.currentWorkoutLog.id = docRef.id;
+                }
+                alert('Workout saved successfully!');
+            } catch (error) {
+                alert('Error saving workout: ' + error.message);
+            }
+        };
+
+        window.clearWorkout = () => {
+            window.currentWorkoutLog = null;
+            document.getElementById('workoutSelection').classList.remove('hidden');
+            document.getElementById('workoutLog').classList.add('hidden');
+        };
+
+        window.generateAIReview = async () => {
+            const reviewContent = document.getElementById('aiReviewContent');
+            reviewContent.innerHTML = '<div class="loading">Generating AI review...</div>';
+            
+            try {
+                // Get all workout logs for this athlete
+                const q = query(
+                    collection(window.db, 'workoutLogs'),
+                    where('athleteId', '==', window.selectedAthlete.id),
+                    orderBy('date', 'desc')
+                );
+                const querySnapshot = await getDocs(q);
+                
+                const workouts = [];
+                querySnapshot.forEach(doc => {
+                    workouts.push(doc.data());
+                });
+
+                // Prepare data for AI
+                const workoutSummary = workouts.map(w => ({
+                    date: w.date,
+                    workout: w.workoutName,
+                    exercises: w.exercises.map(e => ({
+                        name: e.name,
+                        sets: e.sets,
+                        reps: e.reps,
+                        weight: e.weight,
+                        notes: e.notes
+                    }))
+                }));
+
+                // Call Gemini API
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${window.GEMINI_API_KEY}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: `${window.aiPrompt}\n\nAthlete: ${window.selectedAthlete.name}\n\nWorkout History:\n${JSON.stringify(workoutSummary, null, 2)}`
+                            }]
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                const aiText = data.candidates[0].content.parts[0].text;
+                
+                reviewContent.innerHTML = `<div class="ai-review">${aiText}</div>`;
+            } catch (error) {
+                reviewContent.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        };
+
+        window.togglePromptEditor = () => {
+            const editor = document.getElementById('promptEditor');
+            editor.classList.toggle('hidden');
+            document.getElementById('aiPromptText').value = window.aiPrompt;
+        };
+
+        window.savePrompt = async () => {
+            window.aiPrompt = document.getElementById('aiPromptText').value;
+            try {
+                await setDoc(doc(window.db, 'settings', window.currentUser.uid), {
+                    aiPrompt: window.aiPrompt
+                });
+                alert('AI prompt saved!');
+                document.getElementById('promptEditor').classList.add('hidden');
+            } catch (error) {
+                alert('Error saving prompt: ' + error.message);
+            }
+        };
+
+        window.loadAIPrompt = async () => {
+            try {
+                const docSnap = await getDoc(doc(window.db, 'settings', window.currentUser.uid));
+                if (docSnap.exists()) {
+                    window.aiPrompt = docSnap.data().aiPrompt;
+                }
+            } catch (error) {
+                console.log('Using default AI prompt');
+            }
+        };
+
+        window.showMessage = (message, type) => {
+            const messageDiv = document.getElementById('authMessage');
+            messageDiv.className = type;
+            messageDiv.textContent = message;
+            setTimeout(() => {
+                messageDiv.className = '';
+                messageDiv.textContent = '';
+            }, 3000);
+        };
+
+        // Date change listener
+        document.getElementById('dateInput')?.addEventListener('change', loadWorkoutForDate);
+    </script>
+</body>
+</html>
