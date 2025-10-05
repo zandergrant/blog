@@ -72,15 +72,15 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
         // Firebase Configuration
-const firebaseConfig = {
-    apiKey: "AIzaSyDeT_BSciMftq2Rx7Gzk63oP-DgNNslXME",
-    authDomain: "innerlabresearch.firebaseapp.com",
-    projectId: "innerlabresearch",
-    storageBucket: "innerlabresearch.appspot.com", // ← OLD
-    messagingSenderId: "137996904547",
-    appId: "1:137996904547:web:9a1b86dc9aa41237fcb056",
-    measurementId: "G-VGVRLJSWPZ"
-};
+        const firebaseConfig = {
+            apiKey: "AIzaSyDeT_BSciMftq2Rx7Gzk63oP-DgNNslXME",
+            authDomain: "innerlabresearch.firebaseapp.com",
+            projectId: "innerlabresearch",
+            storageBucket: "innerlabresearch.firebasestorage.app",
+            messagingSenderId: "137996904547",
+            appId: "1:137996904547:web:9a1b86dc9aa41237fcb056",
+            measurementId: "G-VGVRLJSWPZ"
+        };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
@@ -140,22 +140,26 @@ const firebaseConfig = {
             mainContent.style.display = 'block';
 
             try {
-                // First, check if we have this data in Firestore
                 const docRef = doc(db, "users", currentUserId, "dailyEntries", dateString);
-                const docSnap = await getDoc(docRef);
-
+                
                 let data;
+                let docSnap;
+                
+                try {
+                    docSnap = await getDoc(docRef);
+                } catch (firestoreError) {
+                    console.log("Document doesn't exist yet, will create new one");
+                    docSnap = null;
+                }
 
-                if (docSnap.exists()) {
+                if (docSnap && docSnap.exists()) {
                     console.log("Loading cached content from Firestore");
                     data = docSnap.data();
                 } else {
                     console.log("Generating new content from Vercel API");
-                    // Call Vercel API to generate new content
                     const response = await fetch(VERCEL_API_URL, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        // CRITICAL FIX: Send userId to the backend
                         body: JSON.stringify({ date: dateString, userId: currentUserId })
                     });
 
