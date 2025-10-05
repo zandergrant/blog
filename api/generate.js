@@ -1,6 +1,11 @@
-// /api/generate.js — autodiscovery + correct Gemini response parsing + safe fallbacks
+// /api/generate.js — one-pager generator
+// - Model auto-discovery (v1 /models)
+// - Correct wrapper parsing (Gemini 1.5 / 2.5)
+// - Strong prompt for a single-topic one-pager
+// - Optional client-provided `topic`
+// - Never 500s the browser; returns status + debug
 
-// tiny raw JSON reader (no framework required)
+// -------- tiny raw JSON reader (framework-free) --------
 async function readJsonBody(req) {
   return new Promise((resolve) => {
     try {
@@ -14,6 +19,7 @@ async function readJsonBody(req) {
   });
 }
 
+// -------- content validator + defaults --------
 function coerceOutput(ai, date) {
   const out = {
     research: {
@@ -25,17 +31,18 @@ function coerceOutput(ai, date) {
     },
     concepts: Array.isArray(ai?.concepts) ? ai.concepts.slice(0,3).map(c => ({
       term:       String(c?.term ?? '').trim().slice(0,160),
-      definition: String(c?.definition ?? '').trim().slice(0,900)
+      definition: String(c?.definition ?? '').trim().slice(0,1000)
     })) : []
   };
-  // minimal content guard; if too thin, fill sensible defaults
+
+  // Reasonable "one-pager" thresholds (not overly strict)
   const ok =
-    out.research.title.length >= 6 &&
-    out.research.introduction.length >= 40 &&
-    out.research.keyFindings.length >= 40 &&
-    out.research.conclusion.length >= 20 &&
+    out.research.title.length >= 20 &&
+    out.research.introduction.length >= 80 &&
+    out.research.keyFindings.length >= 90 &&
+    out.research.conclusion.length >= 50 &&
     out.concepts.length >= 3 &&
-    out.concepts.every(c => c.term && c.definition.length >= 40);
+    out.concepts.every(c => c.term && c.definition.length >= 60);
 
   if (!ok) {
     if (!out.research.title) out.research.title = `Daily Brief — ${date}`;
@@ -53,17 +60,49 @@ function coerceOutput(ai, date) {
       ];
     }
   }
-  return out;
+  return { out, ok };
 }
 
+function buildPrompt(date, topic) {
+  return `
+You are writing a concise, research-informed ONE-PAGER for thoughtful professionals.
+
+Task:
+1) Use THIS specific topic for the date ${date}: ${topic ? topic : 'choose a specific, practical topic yourself (e.g., "Implementation Intentions for Procrastination", "Box Breathing to Lower Arousal Before Presentations", "Interoceptive Labels to Reduce Rumination", "2-Minute Setup Routines to Lower Cognitive Load")'}.
+2) Return JSON ONLY (no code fences) with exactly this shape:
+
+{
+  "research": {
+    "title": string,                   // 6–80 words, must include the chosen topic
+    "introduction": string,            // 90–140 words, plain text
+    "keyFindings": string,             // 110–180 words, plain text; synthesize 3–5 key points as full sentences
+    "conclusion": string,              // 60–120 words, one clear action + why it matters
+    "source": string                   // general plausible citation (e.g., "Cognitive psychology literature, 2011–2023")
+  },
+  "concepts": [
+    { "term": string, "definition": string },  // 30–70 words
+    { "term": string, "definition": string },  // 30–70 words
+    { "term": string, "definition": string }   // 30–70 words
+  ]
+}
+
+Rules:
+- Output ONLY that JSON object — no extra text, no markdown.
+- Use practical, precise language; avoid hype.
+- Do not use bullet characters; write full sentences.
+- Ground concepts in behavior change / attention regulation.
+`.trim();
+}
+
+// -------- main handler --------
 export default async function handler(req, res) {
-  // CORS (loose while finishing; tighten to your GH origin later)
+  // CORS — leave * while finishing; tighten to your GH origin when done
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS,GET');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // env var names we accept
+  // Env var names we accept
   const apiKey =
     process.env.GOOGLE_API_KEY ||
     process.env.GEMINI_API_KEY ||
@@ -80,8 +119,12 @@ export default async function handler(req, res) {
   // GET = quick diag
   if (req.method === 'GET') {
     return res.status(200).json({
-      ok: true, info: 'Use POST for generation.',
-      hasKey: Boolean(apiKey), keyName, endpoint: 'v1', autoDiscover: true
+      ok: true,
+      info: 'Use POST for generation.',
+      hasKey: Boolean(apiKey),
+      keyName,
+      endpoint: 'v1',
+      autoDiscover: true
     });
   }
 
@@ -90,14 +133,16 @@ export default async function handler(req, res) {
   }
 
   const body = await readJsonBody(req);
-  const date = (body && body.date) || new Date().toISOString().slice(0,10);
+  const date  = (body && body.date)  || new Date().toISOString().slice(0,10);
+  const topic = (body && body.topic) || null;
   const userId = (body && body.userId) || 'anon';
 
-  // no key → mock so UI renders
+  // No key → mock so UI renders
   if (!apiKey || apiKey.length < 10) {
-    const out = coerceOutput({}, date);
+    const { out } = coerceOutput({}, date);
     return res.status(200).json({
-      status:'mock', ...out,
+      status:'mock',
+      ...out,
       debug:{ hasKey:false, keyName, userIdPreview:String(userId).slice(0,16) }
     });
   }
@@ -117,44 +162,26 @@ export default async function handler(req, res) {
       const methods = m?.supportedGenerationMethods || m?.supportedMethods || [];
       return Array.isArray(methods) && methods.includes('generateContent');
     };
-    const prefer = models.filter(m => /gemini-([12]\.5|2)\-(flash|pro)/.test(m?.name || '') && supports(m));
+
+    // prefer 2.5 / 1.5 flash/pro → then any generateContent-capable model
+    const prefer = models.filter(m =>
+      /gemini-((2(\.5)?)|1\.5)-(flash|pro)/.test(m?.name || '') && supports(m)
+    );
     const general = models.filter(supports);
 
     pickedModel = (prefer[0]?.name || general[0]?.name || '').replace(/^models\//,'');
     if (!pickedModel) throw new Error('No model with generateContent available to this key.');
   } catch (e) {
-    const out = coerceOutput({}, date);
+    const { out } = coerceOutput({}, date);
     return res.status(200).json({
       status:'fallback', ...out,
       debug:{ step:'listModels', error:String(e), hasKey:true, keyName }
     });
   }
 
-  // 2) call the picked model; parse the wrapper → extract text → parse inner JSON
+  // 2) call the picked model; parse wrapper → extract text → parse inner JSON
   try {
-    const prompt = `
-Return ONLY valid JSON (no code fences) with exactly this shape:
-{
-  "research": {
-    "title": string,
-    "introduction": string,
-    "keyFindings": string,
-    "conclusion": string,
-    "source": string
-  },
-  "concepts": [
-    { "term": string, "definition": string },
-    { "term": string, "definition": string },
-    { "term": string, "definition": string }
-  ]
-}
-Constraints:
-- Audience: thoughtful professionals building centeredness.
-- Date context: ${date}.
-- Keep it concise, practical, science-informed.
-- "source" can be a general plausible citation (no URLs required).
-Output ONLY the JSON object — nothing else.`;
-
+    const prompt = buildPrompt(date, topic);
     const resp = await fetch(
       `${API_BASE}/v1/models/${pickedModel}:generateContent?key=${apiKey}`,
       {
@@ -162,46 +189,46 @@ Output ONLY the JSON object — nothing else.`;
         headers:{ 'Content-Type':'application/json' },
         body: JSON.stringify({
           contents:[{ role:'user', parts:[{ text: prompt }] }],
-          generationConfig:{ temperature:0.7, maxOutputTokens:900 }
+          generationConfig:{ temperature:0.6, maxOutputTokens:1400 }
         })
       }
     );
 
     const raw = await resp.text();
     if (!resp.ok) {
-      const out = coerceOutput({}, date);
+      const { out } = coerceOutput({}, date);
       return res.status(200).json({
         status:'fallback', ...out,
         debug:{ step:'generateContent-response', pickedModel, status:resp.status, body: raw.slice(0,700) }
       });
     }
 
-    // IMPORTANT: parse the WRAPPER first
+    // Parse WRAPPER first (Gemini returns candidates/content/parts)
     let wrapper;
     try { wrapper = JSON.parse(raw); }
     catch {
-      const out = coerceOutput({}, date);
+      const { out } = coerceOutput({}, date);
       return res.status(200).json({
         status:'fallback', ...out,
         debug:{ step:'parse-wrapper', pickedModel, sample: raw.slice(0,400) }
       });
     }
 
-    // Extract the model's text output from the wrapper
-    const text =
-      wrapper?.candidates?.[0]?.content?.parts?.[0]?.text ??
-      wrapper?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data ??
-      '';
-
+    // Extract text from first part with .text
+    let text = '';
+    const parts = wrapper?.candidates?.[0]?.content?.parts || [];
+    for (const p of parts) {
+      if (typeof p?.text === 'string' && p.text.trim()) { text = p.text; break; }
+    }
     if (!text) {
-      const out = coerceOutput({}, date);
+      const { out } = coerceOutput({}, date);
       return res.status(200).json({
         status:'fallback', ...out,
-        debug:{ step:'no-text', pickedModel, wrapperKeys:Object.keys(wrapper || {}) }
+        debug:{ step:'no-text', pickedModel, partsType: Array.isArray(parts) ? 'array' : typeof parts }
       });
     }
 
-    // Clean code fences, then parse the INNER JSON
+    // Clean code fences, then parse inner JSON
     const cleaned = text.trim()
       .replace(/^```json\s*/i,'')
       .replace(/^```\s*/i,'')
@@ -211,18 +238,22 @@ Output ONLY the JSON object — nothing else.`;
     let ai;
     try { ai = JSON.parse(cleaned); }
     catch (e) {
-      const out = coerceOutput({}, date);
+      const { out } = coerceOutput({}, date);
       return res.status(200).json({
         status:'fallback', ...out,
         debug:{ step:'parse-inner', pickedModel, error:String(e), sample: cleaned.slice(0,400) }
       });
     }
 
-    const out = coerceOutput(ai, date);
-    return res.status(200).json({ status:'ok', ...out, debug:{ hasKey:true, keyName, pickedModel } });
+    const { out, ok } = coerceOutput(ai, date);
+    return res.status(200).json({
+      status: ok ? 'ok' : 'fallback',
+      ...out,
+      debug:{ hasKey:true, keyName, pickedModel, validated: ok }
+    });
 
   } catch (err) {
-    const out = coerceOutput({}, date);
+    const { out } = coerceOutput({}, date);
     return res.status(200).json({
       status:'fallback', ...out,
       debug:{ step:'exception', pickedModel, error:String(err) }
