@@ -102,7 +102,6 @@ Date: ${date}. Keep it concise and science-informed.
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
-          responseMimeType: 'application/json',
         })
       }
     );
