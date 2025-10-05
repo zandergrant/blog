@@ -1,6 +1,6 @@
-// /api/generate.js — v1 + correct model, robust, with clear status/debug
+// /api/generate.js — auto-discovers a working Gemini model for your key (no more 404s)
 
-// Tiny raw JSON body reader (works without a framework)
+// ---- tiny raw JSON body reader (framework-free)
 async function readJsonBody(req) {
   return new Promise((resolve) => {
     try {
@@ -15,13 +15,13 @@ async function readJsonBody(req) {
 }
 
 export default async function handler(req, res) {
-  // CORS — keep * while finishing setup; tighten to your origin after it works
+  // CORS — keep wide while finishing setup; tighten later to your GH Pages origin
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS,GET');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Accept several env var names
+  // Env var names we accept
   const apiKey =
     process.env.GOOGLE_API_KEY ||
     process.env.GEMINI_API_KEY ||
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     (process.env.GOOGLE_GENERATIVE_AI_API_KEY && 'GOOGLE_GENERATIVE_AI_API_KEY') ||
     null;
 
-  // Simple GET diagnostic
+  // Quick GET diag
   if (req.method === 'GET') {
     return res.status(200).json({
       ok: true,
@@ -43,7 +43,7 @@ export default async function handler(req, res) {
       hasKey: Boolean(apiKey),
       keyName,
       endpoint: 'v1',
-      modelHint: 'gemini-1.5-flash-latest'
+      note: 'This endpoint will list models internally and pick a working one.'
     });
   }
 
@@ -55,13 +55,13 @@ export default async function handler(req, res) {
   const date = (body && body.date) || new Date().toISOString().slice(0, 10);
   const userId = (body && body.userId) || 'anon';
 
-  // If no key, return a mock so the UI renders (no 500s)
+  // If no key → return mock so UI renders
   if (!apiKey || apiKey.length < 10) {
     return res.status(200).json({
       status: 'mock',
       research: {
         title: `Sample Brief for ${date}`,
-        introduction: 'No Gemini API key found on the server (mock content).',
+        introduction: 'No Gemini API key found on server (mock content).',
         keyFindings: 'Set GOOGLE_API_KEY in Vercel → Project → Settings → Environment Variables, then redeploy.',
         conclusion: 'Once set, this will auto-switch to live AI.',
         source: 'System (mock)'
@@ -71,17 +71,104 @@ export default async function handler(req, res) {
         { term: 'Interoception',  definition: 'Sensing internal body signals.' },
         { term: 'Cognitive Load', definition: 'How much working memory is being used.' }
       ],
-      debug: { hasKey: false, keyName, userIdPreview: String(userId).slice(0,16) }
+      debug: { hasKey: false, keyName, userIdPreview: String(userId).slice(0, 16) }
     });
   }
 
-  // Live AI call — v1 endpoint, correct model ids only
+  // ---------- Live AI path with model auto-discovery ----------
   const API_BASE = 'https://generativelanguage.googleapis.com';
-  const MODELS = [
-    'gemini-1.5-flash-latest', // primary
-    'gemini-1.5-pro-latest'    // safe fallback
-  ];
 
+  // 1) List all models visible to *your key*
+  let modelsResp, modelsText;
+  try {
+    modelsResp = await fetch(`${API_BASE}/v1/models?key=${apiKey}`);
+    modelsText = await modelsResp.text();
+  } catch (e) {
+    return res.status(200).json({
+      status: 'fallback',
+      research: {
+        title: `Model List Error — Fallback for ${date}`,
+        introduction: 'Could not reach the models list endpoint.',
+        keyFindings: String(e).slice(0, 600),
+        conclusion: 'Check network or key and refresh.',
+        source: 'System'
+      },
+      concepts: [],
+      debug: { step: 'listModels-fetch', error: String(e) }
+    });
+  }
+
+  if (!modelsResp.ok) {
+    return res.status(200).json({
+      status: 'fallback',
+      research: {
+        title: `Model List Error (${modelsResp.status}) — Fallback for ${date}`,
+        introduction: 'The models list request failed.',
+        keyFindings: modelsText.slice(0, 800),
+        conclusion: 'Fix and refresh.',
+        source: 'System'
+      },
+      concepts: [],
+      debug: { step: 'listModels-response', status: modelsResp.status }
+    });
+  }
+
+  let listed;
+  try {
+    listed = JSON.parse(modelsText);
+  } catch {
+    return res.status(200).json({
+      status: 'fallback',
+      research: {
+        title: `Model List Parse Error — Fallback for ${date}`,
+        introduction: 'Could not parse the models list.',
+        keyFindings: modelsText.slice(0, 800),
+        conclusion: 'Try again.',
+        source: 'System'
+      },
+      concepts: [],
+      debug: { step: 'listModels-parse' }
+    });
+  }
+
+  const models = Array.isArray(listed?.models) ? listed.models : [];
+  // Prefer 1.5 flash/pro; otherwise anything that supports generateContent
+  const preferred = models.filter(m => {
+    const name = m?.name || '';
+    const methods = m?.supportedGenerationMethods || m?.supportedMethods || [];
+    return (
+      /gemini-1\.5-(flash|pro)/.test(name) &&
+      Array.isArray(methods) &&
+      methods.includes('generateContent')
+    );
+  });
+
+  const general = models.filter(m => {
+    const methods = m?.supportedGenerationMethods || m?.supportedMethods || [];
+    return Array.isArray(methods) && methods.includes('generateContent');
+  });
+
+  const pickedModel = (preferred[0]?.name || general[0]?.name || '').replace(/^models\//, '');
+  if (!pickedModel) {
+    return res.status(200).json({
+      status: 'fallback',
+      research: {
+        title: `No Usable Model — Fallback for ${date}`,
+        introduction: 'Your key lists no models that support generateContent.',
+        keyFindings: 'Enable Gemini API for this key/project or create a new API key in AI Studio.',
+        conclusion: 'Update the key, then refresh.',
+        source: 'System'
+      },
+      concepts: [],
+      debug: {
+        step: 'pickModel',
+        modelsCount: models.length,
+        sampleNames: models.slice(0, 5).map(m => m.name)
+      }
+    });
+  }
+
+  // 2) Call the picked model on v1
   const prompt = `
 Return ONLY valid JSON with this exact shape:
 {
@@ -105,86 +192,79 @@ Guidelines:
 - "source" can be a general plausible citation (no URLs required).
 `;
 
-  let usedModel = null;
-  let upstream = null;
-  let raw = '';
-  const tried = [];
-
+  let upstream, raw;
   try {
-    for (const model of MODELS) {
-      const url = `${API_BASE}/v1/models/${model}:generateContent?key=${apiKey}`;
-      upstream = await fetch(url, {
+    upstream = await fetch(
+      `${API_BASE}/v1/models/${pickedModel}:generateContent?key=${apiKey}`,
+      {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: { temperature: 0.7, maxOutputTokens: 800 }
         })
-      });
-      raw = await upstream.text();
-      tried.push({ model, status: upstream.status });
-      if (upstream.ok) { usedModel = model; break; }
-    }
-
-    if (!upstream || !upstream.ok) {
-      return res.status(200).json({
-        status: 'fallback',
-        research: {
-          title: `AI Error (${upstream ? upstream.status : 'n/a'}) — Fallback for ${date}`,
-          introduction: 'The AI call did not succeed.',
-          keyFindings: raw ? raw.slice(0, 600) : 'No response body.',
-          conclusion: 'Check debug → fix → refresh.',
-          source: 'System'
-        },
-        concepts: [],
-        debug: { hasKey: true, keyName, triedModels: tried }
-      });
-    }
-
-    // Parse AI JSON; clean code fences if necessary
-    let ai;
-    try {
-      ai = JSON.parse(raw);
-    } catch {
-      const cleaned = raw.trim()
-        .replace(/^```json\s*/i, '')
-        .replace(/^```\s*/i, '')
-        .replace(/```$/, '')
-        .trim();
-      ai = JSON.parse(cleaned);
-    }
-
-    const out = {
-      status: 'ok',
-      research: {
-        title:        ai?.research?.title        ?? `Untitled — ${date}`,
-        introduction: ai?.research?.introduction ?? '',
-        keyFindings:  ai?.research?.keyFindings  ?? '',
-        conclusion:   ai?.research?.conclusion   ?? '',
-        source:       ai?.research?.source       ?? 'General literature'
-      },
-      concepts: Array.isArray(ai?.concepts)
-        ? ai.concepts.slice(0, 3).map(c => ({
-            term:       String(c?.term ?? '').slice(0, 160),
-            definition: String(c?.definition ?? '').slice(0, 900)
-          }))
-        : [],
-      debug: { hasKey: true, keyName, usedModel }
-    };
-
-    return res.status(200).json(out);
-  } catch (err) {
+      }
+    );
+    raw = await upstream.text();
+  } catch (e) {
     return res.status(200).json({
       status: 'fallback',
       research: {
-        title: `Server Exception — Fallback for ${date}`,
-        introduction: 'An unexpected error occurred while generating content.',
-        keyFindings: String(err).slice(0, 700),
-        conclusion: 'See debug; check Vercel function logs if needed.',
+        title: `AI Call Error — Fallback for ${date}`,
+        introduction: 'Network error while calling the model.',
+        keyFindings: String(e).slice(0, 600),
+        conclusion: 'Check connection and try again.',
         source: 'System'
       },
       concepts: [],
-      debug: { hasKey: true, keyName, usedModel, triedModels: tried }
+      debug: { step: 'generateContent-fetch', pickedModel, error: String(e) }
     });
   }
+
+  if (!upstream.ok) {
+    return res.status(200).json({
+      status: 'fallback',
+      research: {
+        title: `AI Error (${upstream.status}) — Fallback for ${date}`,
+        introduction: 'The AI call did not succeed.',
+        keyFindings: raw ? raw.slice(0, 900) : 'No response body.',
+        conclusion: 'Check debug → fix → refresh.',
+        source: 'System'
+      },
+      concepts: [],
+      debug: { step: 'generateContent-response', pickedModel, status: upstream.status }
+    });
+  }
+
+  // Parse AI JSON; clean code fences if necessary
+  let ai;
+  try {
+    ai = JSON.parse(raw);
+  } catch {
+    const cleaned = raw.trim()
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/```$/, '')
+      .trim();
+    ai = JSON.parse(cleaned);
+  }
+
+  // Coerce to your UI schema
+  return res.status(200).json({
+    status: 'ok',
+    research: {
+      title:        ai?.research?.title        ?? `Untitled — ${date}`,
+      introduction: ai?.research?.introduction ?? '',
+      keyFindings:  ai?.research?.keyFindings  ?? '',
+      conclusion:   ai?.research?.conclusion   ?? '',
+      source:       ai?.research?.source       ?? 'General literature'
+    },
+    concepts: Array.isArray(ai?.concepts)
+      ? ai.concepts.slice(0, 3).map(c => ({
+          term:       String(c?.term ?? '').slice(0, 160),
+          definition: String(c?.definition ?? '').slice(0, 900)
+        }))
+      : [],
+    debug: { hasKey: true, keyName, pickedModel }
+  });
 }
