@@ -38,7 +38,7 @@
     
     <div class="date-container">
         <label for="date-selector">Select a Day:</label>
-        <input type="date" id="date-selector" disabled>
+        <input type="date" id="date-selector">
     </div>
 
     <main id="main-content" style="display:none;">
@@ -66,58 +66,22 @@
         </section>
     </main>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDeT_BSciMftq2Rx7Gzk63oP-DgNNslXME",
-            authDomain: "innerlabresearch.firebaseapp.com",
-            projectId: "innerlabresearch",
-            storageBucket: "innerlabresearch.firebasestorage.app",
-            messagingSenderId: "137996904547",
-            appId: "1:137996904547:web:9a1b86dc9aa41237fcb056",
-            measurementId: "G-VGVRLJSWPZ"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const auth = getAuth(app);
-
-        // Vercel API endpoint
+    <script>
         const VERCEL_API_URL = 'https://blog-sable-two-13.vercel.app/api/generate';
-
-        let currentUserId = null;
+        
         let currentDateString = null;
+        let journalData = {};
 
         const dateSelector = document.getElementById('date-selector');
         const mainContent = document.getElementById('main-content');
         const saveJournalBtn = document.getElementById('save-journal-btn');
         const journalEntry = document.getElementById('journal-entry');
 
-        // Handle User Authentication
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                console.log("User signed in:", user.uid);
-                currentUserId = user.uid;
-                initializeAppUI();
-            } else {
-                console.log("Signing in anonymously...");
-                signInAnonymously(auth).catch(error => {
-                    console.error("Sign-in failed:", error);
-                    showError("Authentication failed. Please refresh the page.");
-                });
-            }
-        });
-
-        function initializeAppUI() {
+        function initializeApp() {
             const today = new Date();
             const todayString = today.toISOString().split('T')[0];
             dateSelector.value = todayString;
             dateSelector.max = todayString;
-            dateSelector.disabled = false;
             currentDateString = todayString;
             
             loadDataForDate(currentDateString);
@@ -131,53 +95,23 @@
         }
 
         async function loadDataForDate(dateString) {
-            if (!currentUserId) {
-                console.log("Waiting for authentication...");
-                return;
-            }
-
             showLoadingState();
             mainContent.style.display = 'block';
 
             try {
-                const docRef = doc(db, "users", currentUserId, "dailyEntries", dateString);
-                
-                let data;
-                let docSnap;
-                
-                try {
-                    docSnap = await getDoc(docRef);
-                } catch (firestoreError) {
-                    console.log("Document doesn't exist yet, will create new one");
-                    docSnap = null;
+                console.log("Fetching content from API...");
+                const response = await fetch(VERCEL_API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date: dateString, userId: 'user-' + dateString })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
                 }
 
-                if (docSnap && docSnap.exists()) {
-                    console.log("Loading cached content from Firestore");
-                    data = docSnap.data();
-                } else {
-                    console.log("Generating new content from Vercel API");
-                    const response = await fetch(VERCEL_API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ date: dateString, userId: currentUserId })
-                    });
-
-                    if (!response.ok) {
-                        const errorBody = await response.json();
-                        throw new Error(errorBody.details || `API error: ${response.status}`);
-                    }
-
-                    data = await response.json();
-
-                    // Save to Firestore for future visits
-                    await setDoc(docRef, {
-                        research: data.research,
-                        concepts: data.concepts,
-                        journal: "",
-                        createdAt: new Date().toISOString()
-                    });
-                }
+                const data = await response.json();
+                console.log("Content loaded successfully");
 
                 displayContent(data);
                 
@@ -190,7 +124,7 @@
         function displayContent(data) {
             displayResearch(data.research);
             displayConcepts(data.concepts);
-            displayJournal(data.journal || "");
+            displayJournal(journalData[currentDateString] || "");
         }
 
         function displayResearch(research) {
@@ -237,28 +171,24 @@
             journalEntry.value = journalText;
         }
 
-        async function saveJournal() {
-            if (!currentUserId || !currentDateString) return;
+        function saveJournal() {
+            if (!currentDateString) return;
             
             const journalText = journalEntry.value;
+            journalData[currentDateString] = journalText;
+            
             saveJournalBtn.disabled = true;
             saveJournalBtn.textContent = 'Saving...';
 
-            const docRef = doc(db, "users", currentUserId, "dailyEntries", currentDateString);
-            
-            try {
-                await setDoc(docRef, { journal: journalText }, { merge: true });
+            setTimeout(() => {
                 saveJournalBtn.textContent = 'Saved!';
-                console.log("Journal saved to Firestore");
-            } catch (error) {
-                console.error("Error saving journal:", error);
-                saveJournalBtn.textContent = 'Error - Retry';
-            } finally {
+                console.log("Journal saved to memory");
+                
                 setTimeout(() => {
                     saveJournalBtn.textContent = 'Save Journal';
                     saveJournalBtn.disabled = false;
-                }, 2000);
-            }
+                }, 1500);
+            }, 500);
         }
 
         function showLoadingState() {
@@ -266,14 +196,15 @@
             document.getElementById('research-paper-content').innerHTML = '<p class="loading">Creating your personalized research paper...</p>';
             document.getElementById('brief-source').textContent = '';
             document.getElementById('flashcard-grid').innerHTML = '<p class="loading">Preparing core concepts...</p>';
-            journalEntry.value = '';
         }
 
         function showError(message) {
-            const errorHtml = `<div class="error"><strong>Error:</strong> ${message}<br><small>Try refreshing the page or check the console for details.</small></div>`;
+            const errorHtml = `<div class="error"><strong>Error:</strong> ${message}<br><small>Try refreshing the page or check your Vercel API.</small></div>`;
             document.getElementById('research-paper-content').innerHTML = errorHtml;
             document.getElementById('flashcard-grid').innerHTML = '';
         }
+
+        initializeApp();
     </script>
 </body>
 </html>
