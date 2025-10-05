@@ -65,12 +65,15 @@
         import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-functions.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
-        // --- Your Firebase Configuration ---
+        // --- Your Web App's Firebase Configuration ---
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY", // This is your public web API key, not the Gemini key
+            apiKey: "AIzaSyDeT_BSciMftq2Rx7Gzk63oP-DgNNslXME",
             authDomain: "innerlabresearch.firebaseapp.com",
             projectId: "innerlabresearch",
-            // You can add storageBucket etc. if needed
+            storageBucket: "innerlabresearch.firebasestorage.app",
+            messagingSenderId: "137996904547",
+            appId: "1:137996904547:web:9a1b86dc9aa41237fcb056",
+            measurementId: "G-VGVRLJSWPZ"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -88,12 +91,10 @@
         // 1. Handle User Authentication
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                // User is signed in (anonymously in this case)
                 console.log("User is signed in with UID:", user.uid);
                 currentUserId = user.uid;
                 initializeAppUI();
             } else {
-                // User is signed out. Attempt to sign in anonymously.
                 console.log("No user signed in, attempting anonymous sign-in...");
                 signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed:", error));
             }
@@ -104,13 +105,11 @@
             const today = new Date();
             const todayString = today.toISOString().split('T')[0];
             dateSelector.value = todayString;
-            dateSelector.disabled = false; // Enable the date selector
+            dateSelector.disabled = false;
             currentDateString = todayString;
             
-            // Load data for the initial date
             loadDataForDate(currentDateString);
 
-            // Add event listeners
             dateSelector.addEventListener('change', () => {
                 currentDateString = dateSelector.value;
                 loadDataForDate(currentDateString);
@@ -120,17 +119,17 @@
 
         // 3. Main logic to call your Cloud Function
         async function loadDataForDate(dateString) {
+            if (!currentUserId) {
+                console.log("Waiting for user to be authenticated...");
+                return;
+            }
             showLoadingState();
             const getAndGenerateContent = httpsCallable(functions, 'getAndGenerateContent');
             
             try {
-                // Call the function, passing the desired date as data
                 const result = await getAndGenerateContent({ dateString: dateString });
-                
-                // Display the data returned from the function
                 displayAllData(result.data);
                 mainContent.style.display = 'block';
-
             } catch (error) {
                 console.error("Error fetching or generating data via Cloud Function:", error);
                 showErrorState(error.message);
@@ -145,18 +144,15 @@
             saveJournalBtn.disabled = true;
             saveJournalBtn.textContent = 'Saving...';
 
-            // Create a reference to the specific document for this user and date
             const docRef = doc(db, "users", currentUserId, "dailyEntries", currentDateString);
             
             try {
-                // Use setDoc with merge:true to update or create the journal field
                 await setDoc(docRef, { journal: journalText }, { merge: true });
                 saveJournalBtn.textContent = 'Saved!';
             } catch (error) {
                 console.error("Error saving journal:", error);
                 saveJournalBtn.textContent = 'Error - Retry';
             } finally {
-                // Reset the button after 2 seconds
                 setTimeout(() => {
                     saveJournalBtn.textContent = 'Save Journal';
                     saveJournalBtn.disabled = false;
@@ -164,8 +160,7 @@
             }
         }
 
-        // --- UI Helper Functions (unchanged, but included for completeness) ---
-
+        // --- UI Helper Functions ---
         function displayAllData(data) {
             displayResearch(data.research);
             displayConcepts(data.concepts);
