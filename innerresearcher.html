@@ -127,7 +127,7 @@
             const getAndGenerateContent = httpsCallable(functions, 'getAndGenerateContent');
             
             try {
-                const result = await getAndGenerateContent({ dateString: dateString });
+                const result = await getAndGenerateContent({ dateString: dateString, userId: currentUserId });
                 displayAllData(result.data);
                 mainContent.style.display = 'block';
             } catch (error) {
@@ -170,7 +170,7 @@
         function showLoadingState() {
             mainContent.style.display = 'block';
             document.getElementById('brief-title').textContent = "Loading...";
-            document.getElementById('research-paper-content').innerHTML = "<p>Please wait...</p>";
+            document.getElementById('research-paper-content').innerHTML = "<p>Please wait while your content is generated...</p>";
             document.getElementById('brief-source').textContent = "";
             document.getElementById('flashcard-grid').innerHTML = "<p>Loading...</p>";
             document.getElementById('journal-entry').value = "";
@@ -214,3 +214,4 @@
     </script>
 </body>
 </html>
+
