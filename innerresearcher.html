@@ -17,17 +17,20 @@
         .module h2 { font-family: 'Inter', sans-serif; font-weight: 600; color: #005f73; margin-top: 0; border-bottom: 2px solid #e0f7fa; padding-bottom: 10px; }
         .brief-container h3 { font-size: 1.4rem; color: #0a2d4d; margin-bottom: 10px; }
         #research-paper-content h4 { color: #005f73; font-weight: 600; border-bottom: 1px solid #e0f7fa; padding-bottom: 5px; margin-top: 20px; }
+        #research-paper-content p { margin: 10px 0; }
         .flashcard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
-        .flashcard { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; cursor: pointer; perspective: 1000px; }
+        .flashcard { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; cursor: pointer; perspective: 1000px; min-height: 150px; }
         .flashcard.is-flipped .card-inner { transform: rotateY(180deg); }
         .flashcard .card-inner { position: relative; width: 100%; min-height: 120px; transition: transform 0.6s; transform-style: preserve-3d; }
-        .card-face { position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 10px; box-sizing: border-box; }
         .card-front h3 { margin: 0; font-size: 1.2rem; color: #0077b6; }
-        .card-back { transform: rotateY(180deg); font-size: 0.9rem; padding: 5px; }
+        .card-back { transform: rotateY(180deg); font-size: 0.9rem; }
         #journal-entry { width: 100%; box-sizing: border-box; min-height: 150px; padding: 10px; border-radius: 6px; border: 1px solid #dde3e8; font-family: 'Inter', sans-serif; font-size: 1rem; resize: vertical; }
         #save-journal-btn { background-color: #0077b6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: background-color 0.2s; margin-top: 10px; }
         #save-journal-btn:hover:not(:disabled) { background-color: #005f73; }
         #save-journal-btn:disabled { background-color: #a0a0a0; cursor: not-allowed; }
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .error { background-color: #f8d7da; color: #721c24; padding: 20px; border-radius: 8px; margin: 20px 0; }
     </style>
 </head>
 <body>
@@ -35,183 +38,207 @@
     
     <div class="date-container">
         <label for="date-selector">Select a Day:</label>
-        <input type="date" id="date-selector" disabled>
+        <input type="date" id="date-selector">
     </div>
 
-    <main id="main-content" style="display:none;">
+    <main id="main-content">
         <section class="module" id="research-module">
             <h2>Research Paper of the Day</h2>
             <div class="brief-container">
-                <h3 id="brief-title"></h3>
-                <div id="research-paper-content"></div>
+                <h3 id="brief-title">Loading...</h3>
+                <div id="research-paper-content"><p class="loading">Generating your personalized content...</p></div>
                 <small id="brief-source"></small>
             </div>
         </section>
+        
         <section class="module" id="concepts-module">
             <h2>Core Concepts</h2>
-            <div class="flashcard-grid" id="flashcard-grid"></div>
+            <div class="flashcard-grid" id="flashcard-grid">
+                <p class="loading">Loading concepts...</p>
+            </div>
         </section>
+        
         <section class="module" id="journal-module">
             <h2>Synthesis Journal</h2>
             <p>Synthesize today's topics. What connections can you make? How can you apply this?</p>
             <textarea id="journal-entry" placeholder="Your thoughts..."></textarea>
             <button id="save-journal-btn">Save Journal</button>
+            <small id="journal-status" style="display: block; margin-top: 10px; color: #666;"></small>
         </section>
     </main>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
-        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
-        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-functions.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
-
-        // --- Your Web App's Firebase Configuration ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyDeT_BSciMftq2Rx7Gzk63oP-DgNNslXME",
-            authDomain: "innerlabresearch.firebaseapp.com",
-            projectId: "innerlabresearch",
-            storageBucket: "innerlabresearch.firebasestorage.app",
-            messagingSenderId: "137996904547",
-            appId: "1:137996904547:web:9a1b86dc9aa41237fcb056",
-            measurementId: "G-VGVRLJSWPZ"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const functions = getFunctions(app);
-        const auth = getAuth(app);
-
-        let currentUserId = null;
-        let currentDateString = null;
-
+    <script>
         const dateSelector = document.getElementById('date-selector');
-        const mainContent = document.getElementById('main-content');
         const saveJournalBtn = document.getElementById('save-journal-btn');
+        const journalEntry = document.getElementById('journal-entry');
+        const journalStatus = document.getElementById('journal-status');
 
-        // 1. Handle User Authentication
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                console.log("User is signed in with UID:", user.uid);
-                currentUserId = user.uid;
-                initializeAppUI();
-            } else {
-                console.log("No user signed in, attempting anonymous sign-in...");
-                signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed:", error));
-            }
+        // Initialize with today's date
+        const today = new Date();
+        const todayString = today.toISOString().split('T')[0];
+        dateSelector.value = todayString;
+        dateSelector.max = todayString; // Can't select future dates
+
+        let currentDate = todayString;
+
+        // Load content when date changes
+        dateSelector.addEventListener('change', () => {
+            currentDate = dateSelector.value;
+            loadContentForDate(currentDate);
         });
 
-        // 2. Set up the UI once we have a user
-        function initializeAppUI() {
-            const today = new Date();
-            const todayString = today.toISOString().split('T')[0];
-            dateSelector.value = todayString;
-            dateSelector.disabled = false;
-            currentDateString = todayString;
+        // Save journal button
+        saveJournalBtn.addEventListener('click', saveJournal);
+
+        // Load initial content
+        loadContentForDate(currentDate);
+
+        async function loadContentForDate(dateString) {
+            // Check if we have cached content for this date
+            const cached = getFromCache(dateString);
             
-            loadDataForDate(currentDateString);
-
-            dateSelector.addEventListener('change', () => {
-                currentDateString = dateSelector.value;
-                loadDataForDate(currentDateString);
-            });
-            saveJournalBtn.addEventListener('click', saveJournal);
-        }
-
-        // 3. Main logic to call your Cloud Function
-        async function loadDataForDate(dateString) {
-            if (!currentUserId) {
-                console.log("Waiting for user to be authenticated...");
+            if (cached) {
+                displayContent(cached);
                 return;
             }
-            showLoadingState();
-            const getAndGenerateContent = httpsCallable(functions, 'getAndGenerateContent');
-            
+
+            // Show loading state
+            showLoading();
+
             try {
-                const result = await getAndGenerateContent({ dateString: dateString, userId: currentUserId });
-                displayAllData(result.data);
-                mainContent.style.display = 'block';
+                // Call our Vercel serverless function
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ date: dateString })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Cache the content
+                saveToCache(dateString, data);
+                
+                // Display it
+                displayContent(data);
+                
             } catch (error) {
-                console.error("Error fetching or generating data via Cloud Function:", error);
-                showErrorState(error.message);
+                console.error('Error loading content:', error);
+                showError(error.message);
             }
         }
 
-        // 4. Logic to save the journal entry to the database
-        async function saveJournal() {
-            if (!currentUserId || !currentDateString) return;
-            
-            const journalText = document.getElementById('journal-entry').value;
-            saveJournalBtn.disabled = true;
-            saveJournalBtn.textContent = 'Saving...';
-
-            const docRef = doc(db, "users", currentUserId, "dailyEntries", currentDateString);
-            
-            try {
-                await setDoc(docRef, { journal: journalText }, { merge: true });
-                saveJournalBtn.textContent = 'Saved!';
-            } catch (error) {
-                console.error("Error saving journal:", error);
-                saveJournalBtn.textContent = 'Error - Retry';
-            } finally {
-                setTimeout(() => {
-                    saveJournalBtn.textContent = 'Save Journal';
-                    saveJournalBtn.disabled = false;
-                }, 2000);
-            }
-        }
-
-        // --- UI Helper Functions ---
-        function displayAllData(data) {
+        function displayContent(data) {
             displayResearch(data.research);
             displayConcepts(data.concepts);
-            displayJournal(data.journal);
-        }
-
-        function showLoadingState() {
-            mainContent.style.display = 'block';
-            document.getElementById('brief-title').textContent = "Loading...";
-            document.getElementById('research-paper-content').innerHTML = "<p>Please wait while your content is generated...</p>";
-            document.getElementById('brief-source').textContent = "";
-            document.getElementById('flashcard-grid').innerHTML = "<p>Loading...</p>";
-            document.getElementById('journal-entry').value = "";
-        }
-        
-        function showErrorState(message) {
-             document.getElementById('brief-title').textContent = "An Error Occurred";
-             document.getElementById('research-paper-content').innerHTML = `<p>Details: ${message}</p>`;
-             document.getElementById('flashcard-grid').innerHTML = "";
+            loadJournal(currentDate);
         }
 
         function displayResearch(research) {
-            if (!research) { showErrorState("Could not load research paper."); return; }
             document.getElementById('brief-title').textContent = research.title;
+            
             const contentEl = document.getElementById('research-paper-content');
-            const formatContent = (text) => (text || '').replace(/\n/g, '</p><p>');
-            contentEl.innerHTML = `<h4>Introduction</h4><p>${formatContent(research.introduction)}</p><h4>Key Findings</h4><p>${formatContent(research.keyFindings)}</p><h4>Conclusion</h4><p>${formatContent(research.conclusion)}</p>`;
-            document.getElementById('brief-source').textContent = `Source: ${research.source || 'N/A'}`;
+            contentEl.innerHTML = `
+                <h4>Introduction</h4>
+                <p>${research.introduction}</p>
+                <h4>Key Findings</h4>
+                <p>${research.keyFindings}</p>
+                <h4>Conclusion</h4>
+                <p>${research.conclusion}</p>
+            `;
+            
+            document.getElementById('brief-source').textContent = `Source: ${research.source}`;
         }
 
         function displayConcepts(concepts) {
             const grid = document.getElementById('flashcard-grid');
-            grid.innerHTML = "";
-            if (concepts && concepts.length > 0) {
-                concepts.forEach(concept => {
-                    const card = document.createElement('div');
-                    card.className = 'flashcard';
-                    card.innerHTML = `<div class="card-inner"><div class="card-face card-front"><h3>${concept.term}</h3></div><div class="card-face card-back"><p>${concept.definition}</p></div></div>`;
-                    card.addEventListener('click', () => card.classList.toggle('is-flipped'));
-                    grid.appendChild(card);
-                });
+            grid.innerHTML = '';
+            
+            concepts.forEach(concept => {
+                const card = document.createElement('div');
+                card.className = 'flashcard';
+                card.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-face card-front">
+                            <h3>${concept.term}</h3>
+                        </div>
+                        <div class="card-face card-back">
+                            <p>${concept.definition}</p>
+                        </div>
+                    </div>
+                `;
+                card.addEventListener('click', () => card.classList.toggle('is-flipped'));
+                grid.appendChild(card);
+            });
+        }
+
+        function showLoading() {
+            document.getElementById('brief-title').textContent = 'Generating...';
+            document.getElementById('research-paper-content').innerHTML = '<p class="loading">Creating your personalized research paper...</p>';
+            document.getElementById('brief-source').textContent = '';
+            document.getElementById('flashcard-grid').innerHTML = '<p class="loading">Preparing core concepts...</p>';
+        }
+
+        function showError(message) {
+            const errorHtml = `<div class="error"><strong>Error:</strong> ${message}<br><small>Try refreshing the page or selecting a different date.</small></div>`;
+            document.getElementById('research-paper-content').innerHTML = errorHtml;
+            document.getElementById('flashcard-grid').innerHTML = '';
+        }
+
+        // LocalStorage caching functions
+        function getFromCache(dateString) {
+            const key = `innerlab_${dateString}`;
+            const cached = localStorage.getItem(key);
+            return cached ? JSON.parse(cached) : null;
+        }
+
+        function saveToCache(dateString, data) {
+            const key = `innerlab_${dateString}`;
+            localStorage.setItem(key, JSON.stringify(data));
+        }
+
+        // Journal functions
+        function loadJournal(dateString) {
+            const key = `journal_${dateString}`;
+            const saved = localStorage.getItem(key);
+            journalEntry.value = saved || '';
+            updateJournalStatus(saved);
+        }
+
+        function saveJournal() {
+            const key = `journal_${currentDate}`;
+            const text = journalEntry.value;
+            
+            localStorage.setItem(key, text);
+            
+            journalStatus.textContent = '✓ Saved locally';
+            journalStatus.style.color = '#28a745';
+            
+            setTimeout(() => {
+                journalStatus.textContent = '';
+            }, 3000);
+        }
+
+        function updateJournalStatus(hasContent) {
+            if (hasContent) {
+                journalStatus.textContent = 'Previously saved entry loaded';
+                journalStatus.style.color = '#666';
             } else {
-                grid.innerHTML = "<p>No concepts could be loaded.</p>";
+                journalStatus.textContent = '';
             }
         }
 
-        function displayJournal(journalText) {
-            document.getElementById('journal-entry').value = journalText || '';
-        }
-
+        // Auto-save journal as user types (debounced)
+        let saveTimeout;
+        journalEntry.addEventListener('input', () => {
+            clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                saveJournal();
+            }, 2000);
+        });
     </script>
 </body>
 </html>
-
