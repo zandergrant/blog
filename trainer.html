@@ -1,182 +1,96 @@
-<style>
-  :root{
-    /* Palette: dark but legible */
-    --bg: #0f141a;              /* page background */
-    --card: #181e27;            /* cards */
-    --border: #2a3342;          /* subtle borders */
-    --text: #e9eef3;            /* primary text */
-    --text-muted: #9aa6b2;      /* secondary text */
-    --input: #1d2430;           /* inputs / textareas */
-    --input-border: #354052;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lacrosse Trainer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    /* Readable dark theme + forest green accent */
+    * { margin:0; padding:0; box-sizing:border-box; }
 
-    /* Forest-green accent (replaces Strava orange) */
-    --accent: #2e7d32;          /* forest green */
-    --accent-600: #276b2b;
-    --accent-700: #205626;
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+      background:#161b22;          /* page background (slightly lighter) */
+      color:#e6edf3;               /* primary text */
+      min-height:100vh;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
 
-    /* Status colors */
-    --danger: #ff3b30;
-  }
+    .container{ max-width:800px; margin:0 auto; padding:24px; }
 
-  * { margin:0; padding:0; box-sizing:border-box; }
+    h1, h2 { color:#e6edf3; }
+    h1{ font-size:34px; font-weight:700; margin-bottom:8px; letter-spacing:.2px; }
+    h2{ font-size:22px; font-weight:600; margin-bottom:16px; }
 
-  body{
-    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-    background:var(--bg);
-    color:var(--text);
-    min-height:100vh;
-    -webkit-font-smoothing:antialiased;
-    -moz-osx-font-smoothing:grayscale;
-  }
+    .subtitle{ font-size:16px; color:#9fb0c1; margin-bottom:24px; }
 
-  .container{ max-width: 880px; margin: 0 auto; padding: 24px; }
+    .card{
+      background:#1f2630;          /* card surface */
+      border-radius:12px;
+      padding:20px;
+      margin-bottom:16px;
+      border:1px solid #2b3442;    /* border */
+      box-shadow:0 1px 3px rgba(0,0,0,.25);
+    }
 
-  h1, h2 { color: var(--text); }
-  h1{ font-size: 34px; font-weight:700; margin-bottom:8px; letter-spacing:.2px; }
-  h2{ font-size: 22px; font-weight:600; margin-bottom:16px; }
+    /* Forest green accent */
+    .btn{
+      background:#2e7d32;
+      color:#fff;
+      border:none;
+      border-radius:10px;
+      padding:14px 20px;
+      font-size:17px;
+      font-weight:700;
+      cursor:pointer;
+      width:100%;
+      transition:transform .06s ease, background .15s ease, opacity .15s ease;
+    }
+    .btn:hover{ background:#276b2b; transform:translateY(-1px); }
+    .btn:active{ background:#1b5e20; transform:translateY(0); }
 
-  .subtitle{ font-size:16px; color:var(--text-muted); margin-bottom:24px; }
+    .btn-secondary{
+      background:transparent;
+      color:#2e7d32;
+      border:1px solid #2e7d32;
+    }
+    .btn-small{ padding:10px 16px; font-size:15px; width:auto; }
 
-  .card{
-    background:var(--card);
-    border-radius:14px;
-    padding:20px;
-    margin-bottom:16px;
-    border:1px solid var(--border);
-    box-shadow: 0 1px 3px rgba(0,0,0,.25);
-  }
+    .btn-danger{ background:#ff3b30; color:#fff; }
+    .btn-success{ background:#2e7d32; color:#fff; }
 
-  /* Buttons */
-  .btn{
-    background:var(--accent);
-    color:#fff;
-    border:none;
-    border-radius:12px;
-    padding:14px 20px;
-    font-size:17px;
-    font-weight:700;
-    cursor:pointer;
-    width:100%;
-    transition: transform .06s ease, background .15s ease, opacity .15s ease;
-  }
-  .btn:hover{ background:var(--accent-600); transform: translateY(-1px); }
-  .btn:active{ background:var(--accent-700); transform: translateY(0); }
+    .input{
+      width:100%;
+      padding:12px;
+      border-radius:8px;
+      border:1px solid #3a4556;    /* input border */
+      font-size:17px;
+      margin-bottom:12px;
+      background:#212a36;          /* input bg */
+      color:#e6edf3;
+    }
 
-  .btn-secondary{
-    background:transparent;
-    color:var(--accent);
-    border:1px solid var(--accent);
-  }
-  .btn-secondary:hover{
-    background: rgba(46,125,50,.12);
-  }
+    .athlete-item{
+      background:#1f2630;
+      border:1px solid #2b3442;
+      border-radius:12px;
+      padding:20px;
+      margin-bottom:12px;
+      cursor:pointer;
+      transition:transform .15s ease, background-color .15s ease, border-color .15s ease;
+      width:100%;
+      text-align:left;
+    }
+    .athlete-item:hover{
+      transform:scale(1.01);
+      background-color:#232b37;
+      border-color:#3a4659;
+    }
 
-  .btn-small{ padding:10px 16px; font-size:15px; width:auto; }
+    .athlete-name{ font-size:20px; font-weight:600; margin-bottom:4px; }
 
-  .btn-danger{ background:var(--danger); color:#fff; }
-  .btn-success{ background:var(--accent); color:#fff; }
-
-  /* Inputs */
-  .input, textarea, .input-group input, .exercise-name-input{
-    width:100%;
-    padding:12px;
-    border-radius:10px;
-    border:1px solid var(--input-border);
-    background:var(--input);
-    color:var(--text);
-    font-size:16px;
-  }
-  .exercise-name-input{ font-weight:600; }
-  textarea{ min-height:72px; resize:vertical; margin-top:8px; }
-
-  /* List items */
-  .athlete-item{
-    background:var(--card);
-    border:1px solid var(--border);
-    border-radius:12px;
-    padding:18px 20px;
-    margin-bottom:12px;
-    cursor:pointer;
-    transition: transform .15s ease, background-color .15s ease, border-color .15s ease;
-    text-align:left; width:100%;
-  }
-  .athlete-item:hover{
-    transform: scale(1.01);
-    background-color:#1f2632;
-    border-color:#3a4659;
-  }
-  .athlete-name{ font-size:20px; font-weight:600; margin-bottom:4px; }
-
-  /* Workout blocks */
-  .exercise-block{ padding-bottom:20px; margin-bottom:20px; border-bottom:1px solid var(--border); }
-  .set-row, .set-header{
-    display:grid; grid-template-columns:1fr 1fr 1fr 40px; gap:8px; margin-bottom:8px;
-  }
-  .set-header{ font-size:13px; color:var(--text-muted); font-weight:700; }
-
-  .remove-set-btn{
-    background:var(--danger); color:#fff; border:none; border-radius:8px; cursor:pointer;
-    font-size:18px; padding:0; height:40px;
-  }
-  .add-set-btn{
-    background:var(--accent); color:#fff; border:none; border-radius:10px; padding:8px 16px;
-    font-size:15px; cursor:pointer; margin-top:8px;
-  }
-
-  .back-btn{
-    background:none; border:none; color:var(--accent); font-size:17px; cursor:pointer; margin-bottom:16px; padding:0;
-  }
-
-  .workout-option{
-    background:var(--card);
-    border:1px solid var(--border);
-    border-radius:12px;
-    padding:16px;
-    margin-bottom:12px;
-    cursor:pointer;
-    font-size:17px; font-weight:600;
-    color:var(--accent);
-    width:100%; text-align:left; display:flex; justify-content:space-between; align-items:center;
-    transition: background .15s ease, border-color .15s ease;
-  }
-  .workout-option:hover{ background:#1f2632; border-color:#3a4659; }
-
-  .ai-review{ white-space:pre-wrap; line-height:1.65; color:var(--text); }
-
-  .header-flex{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-
-  .loading{ text-align:center; color:var(--text-muted); padding:20px; }
-
-  #authSection{ max-width:420px; margin:100px auto; }
-
-  .hidden{ display:none; }
-
-  .error, .success{
-    color:#fff; padding:12px; border-radius:10px; margin-bottom:12px; font-weight:600;
-  }
-  .error{ background:var(--danger); }
-  .success{ background:var(--accent); }
-
-  .date-selector{ display:flex; gap:8px; margin-bottom:24px; }
-  .date-selector input{ flex:1; max-width:220px; }
-
-  .template-actions{ display:flex; gap:8px; }
-
-  .chart-controls{
-    display:flex; gap:8px; margin-bottom:16px; justify-content:flex-end;
-  }
-  .chart-controls button{
-    padding:8px 16px;
-    border:1px solid var(--accent);
-    background:transparent;
-    color:var(--accent);
-    border-radius:10px;
-    cursor:pointer;
-    font-size:14px;
-    transition: background .15s ease, color .15s ease;
-  }
-  .chart-controls button:hover{ background: rgba(46,125,50,.12); }
-  .chart-controls button.active{ background:var(--accent); color:#fff; }
-
-  canvas{ max-height:300px; }
-</style>
+    .exercise-block{
+      padding-bottom:20px;
+      margin-bottom:20px;
