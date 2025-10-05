@@ -4,334 +4,167 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>The Inner Lab</title>
-    
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet">
-
-    <!-- Internal CSS -->
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f4f7f9;
-            color: #333;
-            line-height: 1.6;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .date-container {
-            width: 100%;
-            max-width: 900px;
-            margin-bottom: 20px;
-            text-align: center;
-            background-color: #fff;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 30, 80, 0.05);
-        }
-        .date-container label {
-            font-weight: 600;
-            margin-right: 10px;
-        }
-        #date-selector {
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid #dde3e8;
-            font-family: 'Inter', sans-serif;
-            font-size: 1rem;
-        }
-        header {
-            text-align: center;
-            width: 100%;
-            max-width: 900px;
-            margin-bottom: 40px;
-            border-bottom: 1px solid #dde3e8;
-            padding-bottom: 20px;
-        }
-        header h1 {
-            font-family: 'Source Serif 4', serif;
-            font-weight: 600;
-            color: #1a2533;
-            font-size: 2.5rem;
-            margin: 0;
-        }
-        main {
-            width: 100%;
-            max-width: 900px;
-            margin: 0 auto;
-        }
-        .module {
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0, 30, 80, 0.05);
-            padding: 25px;
-            margin-bottom: 30px;
-        }
-        .module h2 {
-            font-family: 'Inter', sans-serif;
-            font-weight: 600;
-            color: #005f73;
-            margin-top: 0;
-            border-bottom: 2px solid #e0f7fa;
-            padding-bottom: 10px;
-        }
+        body { font-family: 'Inter', sans-serif; background-color: #f4f7f9; color: #333; line-height: 1.6; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .date-container { width: 100%; max-width: 900px; margin-bottom: 20px; text-align: center; background-color: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 30, 80, 0.05); }
+        header { text-align: center; width: 100%; max-width: 900px; margin-bottom: 40px; border-bottom: 1px solid #dde3e8; padding-bottom: 20px; }
+        header h1 { font-family: 'Source Serif 4', serif; font-weight: 600; color: #1a2533; font-size: 2.5rem; margin: 0; }
+        main { width: 100%; max-width: 900px; margin: 0 auto; }
+        .module { background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 30, 80, 0.05); padding: 25px; margin-bottom: 30px; }
+        .module h2 { font-family: 'Inter', sans-serif; font-weight: 600; color: #005f73; margin-top: 0; border-bottom: 2px solid #e0f7fa; padding-bottom: 10px; }
         .brief-container h3 { font-size: 1.4rem; color: #0a2d4d; margin-bottom: 10px; }
-        .brief-container p { font-size: 1rem; margin-bottom: 15px; }
-        .brief-container small { font-style: italic; color: #6c757d; display: block; margin-top: 15px;}
-        #research-paper-content h4 {
-            color: #005f73;
-            font-weight: 600;
-            border-bottom: 1px solid #e0f7fa;
-            padding-bottom: 5px;
-            margin-top: 20px;
-        }
-        .flashcard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-        }
-        .flashcard {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 20px;
-            cursor: pointer;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            perspective: 1000px;
-        }
-        .flashcard:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0, 30, 80, 0.1); }
-        .flashcard .card-inner {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            min-height: 100px;
-            transition: transform 0.6s;
-            transform-style: preserve-3d;
-        }
+        #research-paper-content h4 { color: #005f73; font-weight: 600; border-bottom: 1px solid #e0f7fa; padding-bottom: 5px; margin-top: 20px; }
+        .flashcard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .flashcard { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; cursor: pointer; perspective: 1000px; }
         .flashcard.is-flipped .card-inner { transform: rotateY(180deg); }
-        .card-face {
-            position: absolute; width: 100%; height: 100%;
-            -webkit-backface-visibility: hidden; backface-visibility: hidden;
-            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
-        }
+        .flashcard .card-inner { position: relative; width: 100%; min-height: 120px; transition: transform 0.6s; transform-style: preserve-3d; }
+        .card-face { position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
         .card-front h3 { margin: 0; font-size: 1.2rem; color: #0077b6; }
-        .card-back { transform: rotateY(180deg); }
-        .card-back p { font-size: 0.9rem; margin: 0; }
-        #journal-entry {
-            width: 100%;
-            min-height: 150px;
-            padding: 10px;
-            border-radius: 6px;
-            border: 1px solid #dde3e8;
-            font-family: 'Inter', sans-serif;
-            font-size: 1rem;
-            resize: vertical;
-        }
-        #save-journal-btn {
-            background-color: #0077b6;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: 600;
-            transition: background-color 0.2s;
-            margin-top: 10px;
-        }
-        #save-journal-btn:hover { background-color: #005f73; }
+        .card-back { transform: rotateY(180deg); font-size: 0.9rem; padding: 5px; }
+        #journal-entry { width: 100%; box-sizing: border-box; min-height: 150px; padding: 10px; border-radius: 6px; border: 1px solid #dde3e8; font-family: 'Inter', sans-serif; font-size: 1rem; resize: vertical; }
+        #save-journal-btn { background-color: #0077b6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: 600; transition: background-color 0.2s; margin-top: 10px; }
+        #save-journal-btn:hover:not(:disabled) { background-color: #005f73; }
         #save-journal-btn:disabled { background-color: #a0a0a0; cursor: not-allowed; }
     </style>
 </head>
 <body>
-    <header>
-        <h1>The Inner Lab Method</h1>
-    </header>
+    <header><h1>The Inner Lab Method</h1></header>
     
     <div class="date-container">
         <label for="date-selector">Select a Day:</label>
-        <input type="date" id="date-selector">
+        <input type="date" id="date-selector" disabled>
     </div>
 
-    <main>
-        <!-- Module 1: Research of the Day -->
+    <main id="main-content" style="display:none;">
         <section class="module" id="research-module">
             <h2>Research Paper of the Day</h2>
             <div class="brief-container">
-                <h3 id="brief-title">Loading...</h3>
-                <div id="research-paper-content">
-                    <p id="brief-body">Please wait while we fetch today's insights.</p>
-                </div>
+                <h3 id="brief-title"></h3>
+                <div id="research-paper-content"></div>
                 <small id="brief-source"></small>
             </div>
         </section>
-
-        <!-- Module 2: Core Concepts -->
         <section class="module" id="concepts-module">
             <h2>Core Concepts</h2>
-            <div class="flashcard-grid" id="flashcard-grid">
-                <!-- Flashcards will be dynamically inserted here -->
-            </div>
+            <div class="flashcard-grid" id="flashcard-grid"></div>
         </section>
-
-        <!-- Module 3: Synthesis Journal -->
         <section class="module" id="journal-module">
             <h2>Synthesis Journal</h2>
-            <p>Synthesize today's topics here. What connections can you make? How can you apply this?</p>
+            <p>Synthesize today's topics. What connections can you make? How can you apply this?</p>
             <textarea id="journal-entry" placeholder="Your thoughts..."></textarea>
             <button id="save-journal-btn">Save Journal</button>
         </section>
     </main>
 
-    <!-- Firebase SDKs (Compatibility version) -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.7/firebase-firestore-compat.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-functions.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
-    <!-- Embedded JavaScript -->
-    <script>
-        // --- Configuration ---
-        const GEMINI_API_KEY = ""; // This is handled by the environment
-        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
-
+        // --- Your Firebase Configuration ---
         const firebaseConfig = {
-          apiKey: "AIzaSyDeT_BSciMftq2Rx7Gzk63oP-DgNNslXME",
-          authDomain: "innerlabresearch.firebaseapp.com",
-          projectId: "innerlabresearch",
-          storageBucket: "innerlabresearch.appspot.com", 
-          messagingSenderId: "137996904547",
-          appId: "1:137996904547:web:9a1b86dc9aa41237fcb056",
-          measurementId: "G-VGVRLJSWPZ"
+            apiKey: "YOUR_API_KEY", // This is your public web API key, not the Gemini key
+            authDomain: "innerlabresearch.firebaseapp.com",
+            projectId: "innerlabresearch",
+            // You can add storageBucket etc. if needed
         };
-        // ----------------------------------------------
 
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const functions = getFunctions(app);
+        const auth = getAuth(app);
 
-        // --- Global Variables ---
-        let db;
-        let currentDate;
+        let currentUserId = null;
+        let currentDateString = null;
 
-        // --- Initialize App ---
-        document.addEventListener('DOMContentLoaded', () => {
-            try {
-                // Initialize Firebase using the compatibility library syntax
-                firebase.initializeApp(firebaseConfig);
-                db = firebase.firestore();
+        const dateSelector = document.getElementById('date-selector');
+        const mainContent = document.getElementById('main-content');
+        const saveJournalBtn = document.getElementById('save-journal-btn');
 
-                const dateSelector = document.getElementById('date-selector');
-                
-                const today = new Date();
-                const todayString = today.toISOString().split('T')[0];
-                dateSelector.value = todayString;
-                currentDate = todayString;
-                loadDataForDate(currentDate);
-
-                dateSelector.addEventListener('change', () => {
-                    currentDate = dateSelector.value;
-                    loadDataForDate(currentDate);
-                });
-
-                document.getElementById('save-journal-btn').addEventListener('click', saveJournal);
-
-            } catch (error) {
-                console.error("Initialization failed:", error);
-                showErrorState("Initialization failed. Check your firebaseConfig object.");
+        // 1. Handle User Authentication
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in (anonymously in this case)
+                console.log("User is signed in with UID:", user.uid);
+                currentUserId = user.uid;
+                initializeAppUI();
+            } else {
+                // User is signed out. Attempt to sign in anonymously.
+                console.log("No user signed in, attempting anonymous sign-in...");
+                signInAnonymously(auth).catch(error => console.error("Anonymous sign-in failed:", error));
             }
         });
 
-        // --- Core Logic ---
+        // 2. Set up the UI once we have a user
+        function initializeAppUI() {
+            const today = new Date();
+            const todayString = today.toISOString().split('T')[0];
+            dateSelector.value = todayString;
+            dateSelector.disabled = false; // Enable the date selector
+            currentDateString = todayString;
+            
+            // Load data for the initial date
+            loadDataForDate(currentDateString);
 
+            // Add event listeners
+            dateSelector.addEventListener('change', () => {
+                currentDateString = dateSelector.value;
+                loadDataForDate(currentDateString);
+            });
+            saveJournalBtn.addEventListener('click', saveJournal);
+        }
+
+        // 3. Main logic to call your Cloud Function
         async function loadDataForDate(dateString) {
             showLoadingState();
-            // Use compatibility syntax for document reference
-            const docRef = db.collection('dailyEntries').doc(dateString);
+            const getAndGenerateContent = httpsCallable(functions, 'getAndGenerateContent');
             
             try {
-                const docSnap = await docRef.get();
+                // Call the function, passing the desired date as data
+                const result = await getAndGenerateContent({ dateString: dateString });
+                
+                // Display the data returned from the function
+                displayAllData(result.data);
+                mainContent.style.display = 'block';
 
-                if (docSnap.exists) { // Note: .exists is a property in v8/compat
-                    const data = docSnap.data();
-                    displayAllData(data);
-                } else {
-                    console.log(`No data for ${dateString}. Generating with AI...`);
-                    const [research, concepts] = await Promise.all([
-                        generateAiResearch(),
-                        generateAiCoreConcepts()
-                    ]);
-
-                    const newData = { research, concepts, journal: '' };
-                    await docRef.set(newData);
-                    console.log(`Data for ${dateString} saved to Firebase.`);
-                    displayAllData(newData);
-                }
             } catch (error) {
-                console.error("Error loading or generating data:", error);
+                console.error("Error fetching or generating data via Cloud Function:", error);
                 showErrorState(error.message);
             }
         }
 
+        // 4. Logic to save the journal entry to the database
         async function saveJournal() {
+            if (!currentUserId || !currentDateString) return;
+            
             const journalText = document.getElementById('journal-entry').value;
-            const saveButton = document.getElementById('save-journal-btn');
-            saveButton.disabled = true;
-            saveButton.textContent = 'Saving...';
+            saveJournalBtn.disabled = true;
+            saveJournalBtn.textContent = 'Saving...';
 
-            const docRef = db.collection('dailyEntries').doc(currentDate);
-
+            // Create a reference to the specific document for this user and date
+            const docRef = doc(db, "users", currentUserId, "dailyEntries", currentDateString);
+            
             try {
-                // Use .update for compatibility library
-                await docRef.update({ journal: journalText });
-                saveButton.textContent = 'Saved!';
-                setTimeout(() => { 
-                    saveButton.textContent = 'Save Journal';
-                    saveButton.disabled = false;
-                }, 2000);
+                // Use setDoc with merge:true to update or create the journal field
+                await setDoc(docRef, { journal: journalText }, { merge: true });
+                saveJournalBtn.textContent = 'Saved!';
             } catch (error) {
                 console.error("Error saving journal:", error);
-                saveButton.textContent = 'Error - Retry';
-                saveButton.disabled = false;
+                saveJournalBtn.textContent = 'Error - Retry';
+            } finally {
+                // Reset the button after 2 seconds
+                setTimeout(() => {
+                    saveJournalBtn.textContent = 'Save Journal';
+                    saveJournalBtn.disabled = false;
+                }, 2000);
             }
         }
 
-        // --- AI Generation Functions ---
-
-        async function generateAiResearch() {
-            const userPrompt = "Generate a 'Research Paper of the Day' summary about a key study or concept related to emotional regulation, relevant to ambitious professionals. The summary should be structured like a mini-paper with a compelling title, an 'introduction' (~150 words), 'keyFindings' (~200 words, can include paragraphs or bullet points), a 'conclusion' (~100 words), and a source.";
-            const payload = {
-                contents: [{ parts: [{ text: userPrompt }] }],
-                generationConfig: { responseMimeType: "application/json", responseSchema: { 
-                    type: "OBJECT", 
-                    properties: { 
-                        "title": { "type": "STRING" }, 
-                        "introduction": { "type": "STRING" }, 
-                        "keyFindings": { "type": "STRING" }, 
-                        "conclusion": { "type": "STRING" }, 
-                        "source": { "type": "STRING" } 
-                    } 
-                } }
-            };
-            const response = await fetch(GEMINI_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!response.ok) throw new Error(`API call failed with status: ${response.status}`);
-            const result = await response.json();
-            return JSON.parse(result.candidates[0].content.parts[0].text);
-        }
-
-        async function generateAiCoreConcepts() {
-            const userPrompt = "Generate a list of exactly 3 essential core concepts related to CBT and performance psychology. For each, provide a 'term' and a concise 'definition'.";
-            const payload = {
-                contents: [{ parts: [{ text: userPrompt }] }],
-                generationConfig: { responseMimeType: "application/json", responseSchema: { type: "ARRAY", items: { type: "OBJECT", properties: { "term": { "type": "STRING" }, "definition": { "type": "STRING" } } } } }
-            };
-            const response = await fetch(GEMINI_API_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!response.ok) throw new Error(`API call failed with status: ${response.status}`);
-            const result = await response.json();
-            return JSON.parse(result.candidates[0].content.parts[0].text);
-        }
-
-
-        // --- DOM Update Functions ---
+        // --- UI Helper Functions (unchanged, but included for completeness) ---
 
         function displayAllData(data) {
             displayResearch(data.research);
@@ -339,23 +172,27 @@
             displayJournal(data.journal);
         }
 
+        function showLoadingState() {
+            mainContent.style.display = 'block';
+            document.getElementById('brief-title').textContent = "Loading...";
+            document.getElementById('research-paper-content').innerHTML = "<p>Please wait...</p>";
+            document.getElementById('brief-source').textContent = "";
+            document.getElementById('flashcard-grid').innerHTML = "<p>Loading...</p>";
+            document.getElementById('journal-entry').value = "";
+        }
+        
+        function showErrorState(message) {
+             document.getElementById('brief-title').textContent = "An Error Occurred";
+             document.getElementById('research-paper-content').innerHTML = `<p>Details: ${message}</p>`;
+             document.getElementById('flashcard-grid').innerHTML = "";
+        }
+
         function displayResearch(research) {
+            if (!research) { showErrorState("Could not load research paper."); return; }
             document.getElementById('brief-title').textContent = research.title;
             const contentEl = document.getElementById('research-paper-content');
-            
-            // Replaces newline characters from the AI with HTML paragraph tags for better formatting.
-            // **FIXED**: Checks if text exists before trying to replace.
             const formatContent = (text) => (text || '').replace(/\n/g, '</p><p>');
-
-            contentEl.innerHTML = `
-                <h4>Introduction</h4>
-                <p>${formatContent(research.introduction)}</p>
-                <h4>Key Findings</h4>
-                <p>${formatContent(research.keyFindings)}</p>
-                <h4>Conclusion</h4>
-                <p>${formatContent(research.conclusion)}</p>
-            `;
-            
+            contentEl.innerHTML = `<h4>Introduction</h4><p>${formatContent(research.introduction)}</p><h4>Key Findings</h4><p>${formatContent(research.keyFindings)}</p><h4>Conclusion</h4><p>${formatContent(research.conclusion)}</p>`;
             document.getElementById('brief-source').textContent = `Source: ${research.source || 'N/A'}`;
         }
 
@@ -364,10 +201,14 @@
             grid.innerHTML = "";
             if (concepts && concepts.length > 0) {
                 concepts.forEach(concept => {
-                    grid.appendChild(createFlashcard(concept));
+                    const card = document.createElement('div');
+                    card.className = 'flashcard';
+                    card.innerHTML = `<div class="card-inner"><div class="card-face card-front"><h3>${concept.term}</h3></div><div class="card-face card-back"><p>${concept.definition}</p></div></div>`;
+                    card.addEventListener('click', () => card.classList.toggle('is-flipped'));
+                    grid.appendChild(card);
                 });
             } else {
-                grid.innerHTML = "<p>No concepts available.</p>";
+                grid.innerHTML = "<p>No concepts could be loaded.</p>";
             }
         }
 
@@ -375,27 +216,6 @@
             document.getElementById('journal-entry').value = journalText || '';
         }
 
-        function createFlashcard(concept) {
-            const card = document.createElement('div');
-            card.className = 'flashcard';
-            card.innerHTML = `<div class="card-inner"><div class="card-face card-front"><h3>${concept.term}</h3></div><div class="card-face card-back"><p>${concept.definition}</p></div></div>`;
-            card.addEventListener('click', () => card.classList.toggle('is-flipped'));
-            return card;
-        }
-
-        function showLoadingState() {
-            document.getElementById('brief-title').textContent = "Loading...";
-            document.getElementById('research-paper-content').innerHTML = "<p>Fetching insights from our records or generating new ones with AI...</p>";
-            document.getElementById('brief-source').textContent = "";
-            document.getElementById('flashcard-grid').innerHTML = "<p>Loading concepts...</p>";
-            document.getElementById('journal-entry').value = "";
-        }
-
-        function showErrorState(message) {
-            document.getElementById('brief-title').textContent = "An Error Occurred";
-            document.getElementById('research-paper-content').innerHTML = `<p>Details: ${message || "Could not load or generate content. Please check the console for errors."}</p>`;
-            document.getElementById('flashcard-grid').innerHTML = "<p>Could not load concepts.</p>";
-        }
     </script>
 </body>
 </html>
