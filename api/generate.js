@@ -1,35 +1,32 @@
-// /api/generate.js  — TEMP DEBUG VERSION
+// /api/generate.js — TEMP DEBUG + HARDENED
 export default async function handler(req, res) {
-  // CORS
-  res.setHeader('Access-Control-Allow-Origin', 'https://zandergrant.github.io');
+  // CORS — open during debug to rule it out
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS,GET');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method === 'GET') return res.status(200).json({ ok: true, info: 'Use POST for generation.' });
+
+  if (req.method === 'GET') {
+    return res.status(200).json({ ok: true, info: 'Use POST for generation.' });
+  }
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
 
   try {
     const apiKey = process.env.GOOGLE_API_KEY;
-    const { date = new Date().toISOString().slice(0,10) } = req.body || {};
+    const { date = new Date().toISOString().slice(0,10), userId = 'anon' } = req.body || {};
 
-    // Debug breadcrumb (not leaking the key itself)
     const debug = {
-      runtime: 'node',
       hasApiKey: Boolean(apiKey),
       apiKeyLen: apiKey ? apiKey.length : 0,
       method: req.method,
       dateReceived: date
     };
-
     if (!apiKey || apiKey.length < 10) {
-      return res.status(500).json({
-        error: 'Missing or invalid GOOGLE_API_KEY on Vercel',
-        debug
-      });
+      return res.status(500).json({ error: 'Missing or invalid GOOGLE_API_KEY on Vercel', debug });
     }
 
     const prompt = `
-Return ONLY valid JSON with:
+Return ONLY valid JSON with this exact shape:
 {
   "research": {
     "title": string,
@@ -54,62 +51,60 @@ Keep it concise, science-informed. Date: ${date}.
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 800 }
+          generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
+          // ask Gemini to emit pure JSON (reduces codefences/markdown)
+          responseMimeType: "application/json"
         })
       }
     );
 
-    const maybeText = await resp.text(); // read once for logging
+    const raw = await resp.text(); // read body once, whether ok or not
     if (!resp.ok) {
-      // Bubble up the exact Gemini error to your page
+      // Bubble exact upstream error so you can see it in the page/Network tab
       return res.status(resp.status).json({
         error: 'Gemini error',
         status: resp.status,
-        details: maybeText,
+        details: raw,
         debug
       });
     }
 
-    // Parse the successful response we just read
-    let body;
-    try {
-      body = JSON.parse(maybeText);
-    } catch (e) {
-      return res.status(500).json({
-        error: 'Gemini returned non-JSON body',
-        details: maybeText.slice(0, 4000),
-        debug
-      });
+    let ai;
+    try { ai = JSON.parse(raw); }
+    catch {
+      // if responseMimeType got ignored and model returned text/markdown
+      const cleaned = raw.trim()
+        .replace(/^```json\s*/i, '')
+        .replace(/^```\s*/i, '')
+        .replace(/```$/, '')
+        .trim();
+      try { ai = JSON.parse(cleaned); }
+      catch {
+        return res.status(500).json({
+          error: 'Gemini returned non-JSON',
+          sample: raw.slice(0, 800),
+          debug
+        });
+      }
     }
 
-    const text = body?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    const cleaned = text.trim()
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/```$/, '')
-      .trim();
-
-    let data;
-    try {
-      data = JSON.parse(cleaned);
-    } catch (e) {
-      return res.status(200).json({
-        research: {
-          title: 'Generation Error (Parse)',
-          introduction: 'Could not parse AI JSON.',
-          keyFindings: cleaned.slice(0, 400),
-          conclusion: 'Check logs or try again.',
-          source: 'System'
-        },
-        concepts: []
-      });
-    }
+    // Validate minimally & coerce to your UI schema
+    const data = {
+      research: {
+        title: ai?.research?.title ?? 'Untitled',
+        introduction: ai?.research?.introduction ?? '',
+        keyFindings: ai?.research?.keyFindings ?? '',
+        conclusion: ai?.research?.conclusion ?? '',
+        source: ai?.research?.source ?? 'General literature'
+      },
+      concepts: Array.isArray(ai?.concepts) ? ai.concepts.slice(0,3).map(c => ({
+        term: String(c?.term ?? '').slice(0, 120),
+        definition: String(c?.definition ?? '').slice(0, 600)
+      })) : []
+    };
 
     return res.status(200).json(data);
   } catch (err) {
-    return res.status(500).json({
-      error: 'Server exception',
-      details: String(err)
-    });
+    return res.status(500).json({ error: 'Server exception', details: String(err) });
   }
 }
