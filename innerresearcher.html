@@ -72,15 +72,15 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
 
         // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyDeT_BSciMftq2Rx7Gzk63oP-DgNNslXME",
-            authDomain: "innerlabresearch.firebaseapp.com",
-            projectId: "innerlabresearch",
-            storageBucket: "innerlabresearch.appspot.com", // Corrected URL
-            messagingSenderId: "137996904547",
-            appId: "1:137996904547:web:9a1b86dc9aa41237fcb056",
-            measurementId: "G-VGVRLJSWPZ"
-        };
+const firebaseConfig = {
+    apiKey: "AIzaSyDeT_BSciMftq2Rx7Gzk63oP-DgNNslXME",
+    authDomain: "innerlabresearch.firebaseapp.com",
+    projectId: "innerlabresearch",
+    storageBucket: "innerlabresearch.appspot.com", // ← OLD
+    messagingSenderId: "137996904547",
+    appId: "1:137996904547:web:9a1b86dc9aa41237fcb056",
+    measurementId: "G-VGVRLJSWPZ"
+};
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
