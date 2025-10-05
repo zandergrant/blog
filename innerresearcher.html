@@ -107,8 +107,9 @@
 
             try {
                 // Call our Vercel serverless function
-                // Use relative path since this file is innerresearcher.html
-                const response = await fetch('/api/generate', {
+                // Replace YOUR-VERCEL-URL with your actual Vercel deployment URL
+                const VERCEL_API_URL = 'https://YOUR-VERCEL-URL.vercel.app/api/generate';
+                const response = await fetch(VERCEL_API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ date: dateString })
