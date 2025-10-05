@@ -1,95 +1,97 @@
-// /api/generate.js — robust, never-500, with fallbacks + debug
+// /api/generate.js — diag-aware + multi-name env support
 
-// Minimal raw-body JSON parser for Vercel "Other" functions
 async function readJsonBody(req) {
   return new Promise((resolve) => {
     try {
       let data = '';
-      req.on('data', (chunk) => (data += chunk));
+      req.on('data', (c) => (data += c));
       req.on('end', () => {
         if (!data) return resolve({});
-        try { resolve(JSON.parse(data)); }
-        catch { resolve({ _raw: data }); }
+        try { resolve(JSON.parse(data)); } catch { resolve({ _raw: data }); }
       });
-    } catch {
-      resolve({});
-    }
+    } catch { resolve({}); }
   });
 }
 
 export default async function handler(req, res) {
-  // CORS — keep * while debugging; tighten later to your GH origin
+  // CORS: keep wide while debugging; tighten later
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS,GET');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Handy GET ping
+  // Look for the key under several common names
+  const apiKey =
+    process.env.GOOGLE_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.GOOGLE_GENAI_API_KEY ||
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+
+  const keyName =
+    (process.env.GOOGLE_API_KEY && 'GOOGLE_API_KEY') ||
+    (process.env.GEMINI_API_KEY && 'GEMINI_API_KEY') ||
+    (process.env.GOOGLE_GENAI_API_KEY && 'GOOGLE_GENAI_API_KEY') ||
+    (process.env.GOOGLE_GENERATIVE_AI_API_KEY && 'GOOGLE_GENERATIVE_AI_API_KEY') ||
+    null;
+
+  // GET = health/diagnostics
   if (req.method === 'GET') {
-    return res
-      .status(200)
-      .json({ ok: true, info: 'Use POST for generation. Add ?diag=1 for env check.' });
+    const diag = {
+      ok: true,
+      info: 'Use POST for generation.',
+      hasKey: Boolean(apiKey),
+      keyName,
+      keyLen: apiKey ? apiKey.length : 0,
+      node: process.version,
+      envHints: [
+        'Set one of: GOOGLE_API_KEY, GEMINI_API_KEY, GOOGLE_GENAI_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY',
+        'Add in Vercel → Project → Settings → Environment Variables',
+        'Target: Production (and Preview if you use it)',
+        'Redeploy after adding or changing env vars'
+      ]
+    };
+    return res.status(200).json(diag);
   }
 
   if (req.method !== 'POST') {
-    return res.status(200).json({ ok: false, error: 'Use POST', note: 'Method not allowed' });
+    return res.status(200).json({ ok: false, error: 'Use POST' });
   }
 
-  // Read body safely (works even without Next.js/Express body parser)
   const body = await readJsonBody(req);
-  const date = (body && body.date) || new Date().toISOString().slice(0, 10);
-  const userId = (body && body.userId) || 'anon';
+  const date = (body && body.date) || new Date().toISOString().slice(0,10);
 
-  const apiKey = process.env.GOOGLE_API_KEY;
-  const baseDebug = {
-    hasApiKey: Boolean(apiKey),
-    apiKeyLen: apiKey ? apiKey.length : 0,
-    node: process.version,
-    method: req.method,
-    dateReceived: date,
-    userIdPreview: String(userId).slice(0, 16),
-    rawBodyType: typeof body,
-    rawBodyHasUnderscoreRaw: Boolean(body && body._raw),
-  };
-
-  // If no key, return a usable mock so the UI renders (and show debug)
+  // If we still don’t see a key, return a mock + debug (no 500s)
   if (!apiKey || apiKey.length < 10) {
     return res.status(200).json({
       research: {
         title: `Sample Brief for ${date}`,
-        introduction: 'No GOOGLE_API_KEY found on server. Showing mock content.',
-        keyFindings: 'Add GOOGLE_API_KEY in Vercel → Settings → Environment Variables, then redeploy.',
-        conclusion: 'Once set, this will switch to live AI output automatically.',
-        source: 'System (mock)',
+        introduction: 'No Gemini API key found on the server (mock content).',
+        keyFindings: 'Set your key in Vercel and redeploy.',
+        conclusion: 'Once set, this will auto-switch to live AI.',
+        source: 'System (mock)'
       },
       concepts: [
         { term: 'Centeredness', definition: 'Steadiness under changing conditions.' },
         { term: 'Interoception', definition: 'Sensing internal body signals.' },
         { term: 'Cognitive Load', definition: 'Amount of working memory being used.' },
       ],
-      debug: baseDebug,
+      debug: { hasKey: false, keyName, keyLen: 0 }
     });
   }
 
-  // With a key, try Gemini — but never throw; always return 200 + fallback on errors
+  // Live AI call (unchanged, trimmed)
   try {
     const prompt = `
-Return ONLY valid JSON with this exact shape:
+Return ONLY valid JSON:
 {
-  "research": {
-    "title": string,
-    "introduction": string,
-    "keyFindings": string,
-    "conclusion": string,
-    "source": string
-  },
+  "research": { "title": string, "introduction": string, "keyFindings": string, "conclusion": string, "source": string },
   "concepts": [
     { "term": string, "definition": string },
     { "term": string, "definition": string },
     { "term": string, "definition": string }
   ]
 }
-Keep it concise, science-informed. Date: ${date}.
+Date: ${date}. Keep it concise and science-informed.
 `;
 
     const upstream = await fetch(
@@ -101,41 +103,37 @@ Keep it concise, science-informed. Date: ${date}.
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
           responseMimeType: 'application/json',
-        }),
+        })
       }
     );
 
     const raw = await upstream.text();
     if (!upstream.ok) {
-      // Upstream error (invalid key, quota, etc.) — return safe fallback + debug
       return res.status(200).json({
         research: {
-          title: `AI Error (status ${upstream.status}) — Fallback for ${date}`,
+          title: `AI Error (${upstream.status}) — Fallback for ${date}`,
           introduction: 'The AI call did not succeed.',
-          keyFindings: 'Check the debug field for reason (API key, quota, permissions).',
-          conclusion: 'Fix and refresh.',
-          source: 'System',
+          keyFindings: raw.slice(0, 500),
+          conclusion: 'Fix the issue and refresh.',
+          source: 'System'
         },
         concepts: [],
-        debug: { ...baseDebug, upstreamStatus: upstream.status, upstreamBody: raw.slice(0, 900) },
+        debug: { hasKey: true, keyName, keyLen: apiKey.length, upstreamStatus: upstream.status }
       });
     }
 
-    // Parse AI JSON (with a second-chance cleanup)
     let ai;
-    try {
-      ai = JSON.parse(raw);
-    } catch {
+    try { ai = JSON.parse(raw); }
+    catch {
       const cleaned = raw.trim()
         .replace(/^```json\s*/i, '')
         .replace(/^```\s*/i, '')
         .replace(/```$/, '')
         .trim();
-      ai = JSON.parse(cleaned); // will throw to catch if still invalid
+      ai = JSON.parse(cleaned);
     }
 
-    // Coerce to UI schema
-    const data = {
+    return res.status(200).json({
       research: {
         title: ai?.research?.title ?? `Untitled — ${date}`,
         introduction: ai?.research?.introduction ?? '',
@@ -143,28 +141,20 @@ Keep it concise, science-informed. Date: ${date}.
         conclusion: ai?.research?.conclusion ?? '',
         source: ai?.research?.source ?? 'General literature',
       },
-      concepts: Array.isArray(ai?.concepts)
-        ? ai.concepts.slice(0, 3).map((c) => ({
-            term: String(c?.term ?? '').slice(0, 120),
-            definition: String(c?.definition ?? '').slice(0, 800),
-          }))
-        : [],
-      debug: baseDebug,
-    };
-
-    return res.status(200).json(data);
+      concepts: Array.isArray(ai?.concepts) ? ai.concepts.slice(0,3) : [],
+      debug: { hasKey: true, keyName, keyLen: apiKey.length }
+    });
   } catch (err) {
-    // Any unexpected exception → safe fallback + debug
     return res.status(200).json({
       research: {
         title: `Server Exception — Fallback for ${date}`,
-        introduction: 'An unexpected error occurred while generating content.',
-        keyFindings: String(err).slice(0, 700),
-        conclusion: 'See debug field; check Vercel Function logs.',
-        source: 'System',
+        introduction: 'Unexpected error while generating content.',
+        keyFindings: String(err).slice(0, 500),
+        conclusion: 'See debug, then check Vercel logs.',
+        source: 'System'
       },
       concepts: [],
-      debug: baseDebug,
+      debug: { hasKey: true, keyName, keyLen: apiKey.length, error: String(err) }
     });
   }
 }
