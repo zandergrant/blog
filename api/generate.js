@@ -1,6 +1,6 @@
-// /api/generate.js — auto-discovers a working Gemini model for your key (no more 404s)
+// /api/generate.js — autodiscovery + correct Gemini response parsing + safe fallbacks
 
-// ---- tiny raw JSON body reader (framework-free)
+// tiny raw JSON reader (no framework required)
 async function readJsonBody(req) {
   return new Promise((resolve) => {
     try {
@@ -14,14 +14,56 @@ async function readJsonBody(req) {
   });
 }
 
+function coerceOutput(ai, date) {
+  const out = {
+    research: {
+      title:        (ai?.research?.title ?? '').trim(),
+      introduction: (ai?.research?.introduction ?? '').trim(),
+      keyFindings:  (ai?.research?.keyFindings ?? '').trim(),
+      conclusion:   (ai?.research?.conclusion ?? '').trim(),
+      source:       (ai?.research?.source ?? 'General literature').trim()
+    },
+    concepts: Array.isArray(ai?.concepts) ? ai.concepts.slice(0,3).map(c => ({
+      term:       String(c?.term ?? '').trim().slice(0,160),
+      definition: String(c?.definition ?? '').trim().slice(0,900)
+    })) : []
+  };
+  // minimal content guard; if too thin, fill sensible defaults
+  const ok =
+    out.research.title.length >= 6 &&
+    out.research.introduction.length >= 40 &&
+    out.research.keyFindings.length >= 40 &&
+    out.research.conclusion.length >= 20 &&
+    out.concepts.length >= 3 &&
+    out.concepts.every(c => c.term && c.definition.length >= 40);
+
+  if (!ok) {
+    if (!out.research.title) out.research.title = `Daily Brief — ${date}`;
+    if (!out.research.introduction) out.research.introduction =
+      'This brief summarizes a practical idea for improving attention and centeredness in daily work.';
+    if (!out.research.keyFindings) out.research.keyFindings =
+      '• Brief, regular practice compounds.\n• Labeling sensations reduces rumination.\n• Lowering cognitive load improves follow-through.';
+    if (!out.research.conclusion) out.research.conclusion =
+      'Pick one small action and do it today. Consistency beats intensity.';
+    if (!out.concepts || out.concepts.length < 3) {
+      out.concepts = [
+        { term:'Centeredness',  definition:'A stable, steady attentional state under changing conditions, built through brief, regular practice.' },
+        { term:'Interoception', definition:'Awareness of internal body signals (breath, heartbeat, tension) that helps regulate attention and emotion.' },
+        { term:'Cognitive load',definition:'How much working memory is in use; lowering it improves clarity and follow-through.' }
+      ];
+    }
+  }
+  return out;
+}
+
 export default async function handler(req, res) {
-  // CORS — keep wide while finishing setup; tighten later to your GH Pages origin
+  // CORS (loose while finishing; tighten to your GH origin later)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS,GET');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Env var names we accept
+  // env var names we accept
   const apiKey =
     process.env.GOOGLE_API_KEY ||
     process.env.GEMINI_API_KEY ||
@@ -35,142 +77,63 @@ export default async function handler(req, res) {
     (process.env.GOOGLE_GENERATIVE_AI_API_KEY && 'GOOGLE_GENERATIVE_AI_API_KEY') ||
     null;
 
-  // Quick GET diag
+  // GET = quick diag
   if (req.method === 'GET') {
     return res.status(200).json({
-      ok: true,
-      info: 'Use POST for generation.',
-      hasKey: Boolean(apiKey),
-      keyName,
-      endpoint: 'v1',
-      note: 'This endpoint will list models internally and pick a working one.'
+      ok: true, info: 'Use POST for generation.',
+      hasKey: Boolean(apiKey), keyName, endpoint: 'v1', autoDiscover: true
     });
   }
 
   if (req.method !== 'POST') {
-    return res.status(200).json({ status: 'error', error: 'Use POST' });
+    return res.status(200).json({ status:'error', error:'Use POST' });
   }
 
   const body = await readJsonBody(req);
-  const date = (body && body.date) || new Date().toISOString().slice(0, 10);
+  const date = (body && body.date) || new Date().toISOString().slice(0,10);
   const userId = (body && body.userId) || 'anon';
 
-  // If no key → return mock so UI renders
+  // no key → mock so UI renders
   if (!apiKey || apiKey.length < 10) {
+    const out = coerceOutput({}, date);
     return res.status(200).json({
-      status: 'mock',
-      research: {
-        title: `Sample Brief for ${date}`,
-        introduction: 'No Gemini API key found on server (mock content).',
-        keyFindings: 'Set GOOGLE_API_KEY in Vercel → Project → Settings → Environment Variables, then redeploy.',
-        conclusion: 'Once set, this will auto-switch to live AI.',
-        source: 'System (mock)'
-      },
-      concepts: [
-        { term: 'Centeredness',   definition: 'Steadiness under changing conditions.' },
-        { term: 'Interoception',  definition: 'Sensing internal body signals.' },
-        { term: 'Cognitive Load', definition: 'How much working memory is being used.' }
-      ],
-      debug: { hasKey: false, keyName, userIdPreview: String(userId).slice(0, 16) }
+      status:'mock', ...out,
+      debug:{ hasKey:false, keyName, userIdPreview:String(userId).slice(0,16) }
     });
   }
 
-  // ---------- Live AI path with model auto-discovery ----------
   const API_BASE = 'https://generativelanguage.googleapis.com';
 
-  // 1) List all models visible to *your key*
-  let modelsResp, modelsText;
+  // 1) list models visible to THIS key and pick one that supports generateContent
+  let pickedModel = '';
   try {
-    modelsResp = await fetch(`${API_BASE}/v1/models?key=${apiKey}`);
-    modelsText = await modelsResp.text();
+    const listResp = await fetch(`${API_BASE}/v1/models?key=${apiKey}`);
+    const listText = await listResp.text();
+    if (!listResp.ok) throw new Error(`listModels ${listResp.status}: ${listText.slice(0,300)}`);
+    const listed = JSON.parse(listText);
+    const models = Array.isArray(listed?.models) ? listed.models : [];
+
+    const supports = m => {
+      const methods = m?.supportedGenerationMethods || m?.supportedMethods || [];
+      return Array.isArray(methods) && methods.includes('generateContent');
+    };
+    const prefer = models.filter(m => /gemini-([12]\.5|2)\-(flash|pro)/.test(m?.name || '') && supports(m));
+    const general = models.filter(supports);
+
+    pickedModel = (prefer[0]?.name || general[0]?.name || '').replace(/^models\//,'');
+    if (!pickedModel) throw new Error('No model with generateContent available to this key.');
   } catch (e) {
+    const out = coerceOutput({}, date);
     return res.status(200).json({
-      status: 'fallback',
-      research: {
-        title: `Model List Error — Fallback for ${date}`,
-        introduction: 'Could not reach the models list endpoint.',
-        keyFindings: String(e).slice(0, 600),
-        conclusion: 'Check network or key and refresh.',
-        source: 'System'
-      },
-      concepts: [],
-      debug: { step: 'listModels-fetch', error: String(e) }
+      status:'fallback', ...out,
+      debug:{ step:'listModels', error:String(e), hasKey:true, keyName }
     });
   }
 
-  if (!modelsResp.ok) {
-    return res.status(200).json({
-      status: 'fallback',
-      research: {
-        title: `Model List Error (${modelsResp.status}) — Fallback for ${date}`,
-        introduction: 'The models list request failed.',
-        keyFindings: modelsText.slice(0, 800),
-        conclusion: 'Fix and refresh.',
-        source: 'System'
-      },
-      concepts: [],
-      debug: { step: 'listModels-response', status: modelsResp.status }
-    });
-  }
-
-  let listed;
+  // 2) call the picked model; parse the wrapper → extract text → parse inner JSON
   try {
-    listed = JSON.parse(modelsText);
-  } catch {
-    return res.status(200).json({
-      status: 'fallback',
-      research: {
-        title: `Model List Parse Error — Fallback for ${date}`,
-        introduction: 'Could not parse the models list.',
-        keyFindings: modelsText.slice(0, 800),
-        conclusion: 'Try again.',
-        source: 'System'
-      },
-      concepts: [],
-      debug: { step: 'listModels-parse' }
-    });
-  }
-
-  const models = Array.isArray(listed?.models) ? listed.models : [];
-  // Prefer 1.5 flash/pro; otherwise anything that supports generateContent
-  const preferred = models.filter(m => {
-    const name = m?.name || '';
-    const methods = m?.supportedGenerationMethods || m?.supportedMethods || [];
-    return (
-      /gemini-1\.5-(flash|pro)/.test(name) &&
-      Array.isArray(methods) &&
-      methods.includes('generateContent')
-    );
-  });
-
-  const general = models.filter(m => {
-    const methods = m?.supportedGenerationMethods || m?.supportedMethods || [];
-    return Array.isArray(methods) && methods.includes('generateContent');
-  });
-
-  const pickedModel = (preferred[0]?.name || general[0]?.name || '').replace(/^models\//, '');
-  if (!pickedModel) {
-    return res.status(200).json({
-      status: 'fallback',
-      research: {
-        title: `No Usable Model — Fallback for ${date}`,
-        introduction: 'Your key lists no models that support generateContent.',
-        keyFindings: 'Enable Gemini API for this key/project or create a new API key in AI Studio.',
-        conclusion: 'Update the key, then refresh.',
-        source: 'System'
-      },
-      concepts: [],
-      debug: {
-        step: 'pickModel',
-        modelsCount: models.length,
-        sampleNames: models.slice(0, 5).map(m => m.name)
-      }
-    });
-  }
-
-  // 2) Call the picked model on v1
-  const prompt = `
-Return ONLY valid JSON with this exact shape:
+    const prompt = `
+Return ONLY valid JSON (no code fences) with exactly this shape:
 {
   "research": {
     "title": string,
@@ -185,86 +148,84 @@ Return ONLY valid JSON with this exact shape:
     { "term": string, "definition": string }
   ]
 }
-Guidelines:
-- Audience: thoughtful professionals working on centeredness.
-- Tie lightly to the date: ${date}.
+Constraints:
+- Audience: thoughtful professionals building centeredness.
+- Date context: ${date}.
 - Keep it concise, practical, science-informed.
 - "source" can be a general plausible citation (no URLs required).
-`;
+Output ONLY the JSON object — nothing else.`;
 
-  let upstream, raw;
-  try {
-    upstream = await fetch(
+    const resp = await fetch(
       `${API_BASE}/v1/models/${pickedModel}:generateContent?key=${apiKey}`,
       {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 800 }
+          contents:[{ role:'user', parts:[{ text: prompt }] }],
+          generationConfig:{ temperature:0.7, maxOutputTokens:900 }
         })
       }
     );
-    raw = await upstream.text();
-  } catch (e) {
-    return res.status(200).json({
-      status: 'fallback',
-      research: {
-        title: `AI Call Error — Fallback for ${date}`,
-        introduction: 'Network error while calling the model.',
-        keyFindings: String(e).slice(0, 600),
-        conclusion: 'Check connection and try again.',
-        source: 'System'
-      },
-      concepts: [],
-      debug: { step: 'generateContent-fetch', pickedModel, error: String(e) }
-    });
-  }
 
-  if (!upstream.ok) {
-    return res.status(200).json({
-      status: 'fallback',
-      research: {
-        title: `AI Error (${upstream.status}) — Fallback for ${date}`,
-        introduction: 'The AI call did not succeed.',
-        keyFindings: raw ? raw.slice(0, 900) : 'No response body.',
-        conclusion: 'Check debug → fix → refresh.',
-        source: 'System'
-      },
-      concepts: [],
-      debug: { step: 'generateContent-response', pickedModel, status: upstream.status }
-    });
-  }
+    const raw = await resp.text();
+    if (!resp.ok) {
+      const out = coerceOutput({}, date);
+      return res.status(200).json({
+        status:'fallback', ...out,
+        debug:{ step:'generateContent-response', pickedModel, status:resp.status, body: raw.slice(0,700) }
+      });
+    }
 
-  // Parse AI JSON; clean code fences if necessary
-  let ai;
-  try {
-    ai = JSON.parse(raw);
-  } catch {
-    const cleaned = raw.trim()
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/```$/, '')
+    // IMPORTANT: parse the WRAPPER first
+    let wrapper;
+    try { wrapper = JSON.parse(raw); }
+    catch {
+      const out = coerceOutput({}, date);
+      return res.status(200).json({
+        status:'fallback', ...out,
+        debug:{ step:'parse-wrapper', pickedModel, sample: raw.slice(0,400) }
+      });
+    }
+
+    // Extract the model's text output from the wrapper
+    const text =
+      wrapper?.candidates?.[0]?.content?.parts?.[0]?.text ??
+      wrapper?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data ??
+      '';
+
+    if (!text) {
+      const out = coerceOutput({}, date);
+      return res.status(200).json({
+        status:'fallback', ...out,
+        debug:{ step:'no-text', pickedModel, wrapperKeys:Object.keys(wrapper || {}) }
+      });
+    }
+
+    // Clean code fences, then parse the INNER JSON
+    const cleaned = text.trim()
+      .replace(/^```json\s*/i,'')
+      .replace(/^```\s*/i,'')
+      .replace(/```$/,'')
       .trim();
-    ai = JSON.parse(cleaned);
-  }
 
-  // Coerce to your UI schema
-  return res.status(200).json({
-    status: 'ok',
-    research: {
-      title:        ai?.research?.title        ?? `Untitled — ${date}`,
-      introduction: ai?.research?.introduction ?? '',
-      keyFindings:  ai?.research?.keyFindings  ?? '',
-      conclusion:   ai?.research?.conclusion   ?? '',
-      source:       ai?.research?.source       ?? 'General literature'
-    },
-    concepts: Array.isArray(ai?.concepts)
-      ? ai.concepts.slice(0, 3).map(c => ({
-          term:       String(c?.term ?? '').slice(0, 160),
-          definition: String(c?.definition ?? '').slice(0, 900)
-        }))
-      : [],
-    debug: { hasKey: true, keyName, pickedModel }
-  });
+    let ai;
+    try { ai = JSON.parse(cleaned); }
+    catch (e) {
+      const out = coerceOutput({}, date);
+      return res.status(200).json({
+        status:'fallback', ...out,
+        debug:{ step:'parse-inner', pickedModel, error:String(e), sample: cleaned.slice(0,400) }
+      });
+    }
+
+    const out = coerceOutput(ai, date);
+    return res.status(200).json({ status:'ok', ...out, debug:{ hasKey:true, keyName, pickedModel } });
+
+  } catch (err) {
+    const out = coerceOutput({}, date);
+    return res.status(200).json({
+      status:'fallback', ...out,
+      debug:{ step:'exception', pickedModel, error:String(err) }
+    });
+  }
 }
