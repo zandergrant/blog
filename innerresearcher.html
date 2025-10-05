@@ -273,21 +273,3 @@
     </script>
 </body>
 </html>
-```
-
-#### **Step 2: Update Your Firebase Security Rules**
-
-**Action:** Go to your Firebase project's **Firestore Database > Rules** tab, delete everything, and replace it with these final rules. Then click **Publish**.
-
-```
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // This rule allows any authenticated user (including the anonymous
-    // users your app creates) to read and write ONLY to their own
-    // private documents within the 'users' collection.
-    match /users/{userId}/dailyEntries/{entry} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-  }
-}
