@@ -1,24 +1,35 @@
-// /api/generate.js  — Live Gemini version (no terminal needed)
-
+// /api/generate.js  — TEMP DEBUG VERSION
 export default async function handler(req, res) {
-  // --- CORS (allow your GitHub Pages site) ---
+  // CORS
   res.setHeader('Access-Control-Allow-Origin', 'https://zandergrant.github.io');
   res.setHeader('Access-Control-Allow-Methods', 'POST,OPTIONS,GET');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.status(200).end();
-
-  // Optional: quiet down random GET pings
   if (req.method === 'GET') return res.status(200).json({ ok: true, info: 'Use POST for generation.' });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Use POST' });
 
-  const apiKey = process.env.GOOGLE_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Missing GOOGLE_API_KEY on Vercel' });
-
   try {
-    const { date = new Date().toISOString().slice(0,10), userId = 'anon' } = req.body || {};
+    const apiKey = process.env.GOOGLE_API_KEY;
+    const { date = new Date().toISOString().slice(0,10) } = req.body || {};
+
+    // Debug breadcrumb (not leaking the key itself)
+    const debug = {
+      runtime: 'node',
+      hasApiKey: Boolean(apiKey),
+      apiKeyLen: apiKey ? apiKey.length : 0,
+      method: req.method,
+      dateReceived: date
+    };
+
+    if (!apiKey || apiKey.length < 10) {
+      return res.status(500).json({
+        error: 'Missing or invalid GOOGLE_API_KEY on Vercel',
+        debug
+      });
+    }
 
     const prompt = `
-Return ONLY valid JSON (no code fences) with this shape:
+Return ONLY valid JSON with:
 {
   "research": {
     "title": string,
@@ -33,14 +44,9 @@ Return ONLY valid JSON (no code fences) with this shape:
     { "term": string, "definition": string }
   ]
 }
-Guidelines:
-- Audience: thoughtful professionals building centeredness.
-- Tie to the date: ${date}.
-- Keep it concise, practical, science-informed.
-- "source" should be a general, plausible citation (no URLs needed).
+Keep it concise, science-informed. Date: ${date}.
 `;
 
-    // Call Gemini via REST from the server (safe)
     const resp = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
       {
@@ -53,15 +59,30 @@ Guidelines:
       }
     );
 
+    const maybeText = await resp.text(); // read once for logging
     if (!resp.ok) {
-      const details = await resp.text();
-      return res.status(resp.status).json({ error: 'Gemini error', details });
+      // Bubble up the exact Gemini error to your page
+      return res.status(resp.status).json({
+        error: 'Gemini error',
+        status: resp.status,
+        details: maybeText,
+        debug
+      });
     }
 
-    const body = await resp.json();
-    const text = body?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    // Parse the successful response we just read
+    let body;
+    try {
+      body = JSON.parse(maybeText);
+    } catch (e) {
+      return res.status(500).json({
+        error: 'Gemini returned non-JSON body',
+        details: maybeText.slice(0, 4000),
+        debug
+      });
+    }
 
-    // Clean common code-fence formatting then parse JSON
+    const text = body?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
     const cleaned = text.trim()
       .replace(/^```json\s*/i, '')
       .replace(/^```\s*/i, '')
@@ -72,21 +93,23 @@ Guidelines:
     try {
       data = JSON.parse(cleaned);
     } catch (e) {
-      // Fallback if the model slips formatting
-      data = {
+      return res.status(200).json({
         research: {
-          title: 'Generation Error (Fallback)',
-          introduction: 'We had trouble parsing the AI response.',
-          keyFindings: 'Please try again.',
-          conclusion: 'Check function logs if it persists.',
+          title: 'Generation Error (Parse)',
+          introduction: 'Could not parse AI JSON.',
+          keyFindings: cleaned.slice(0, 400),
+          conclusion: 'Check logs or try again.',
           source: 'System'
         },
         concepts: []
-      };
+      });
     }
 
     return res.status(200).json(data);
   } catch (err) {
-    return res.status(500).json({ error: 'Server error', details: String(err) });
+    return res.status(500).json({
+      error: 'Server exception',
+      details: String(err)
+    });
   }
 }
