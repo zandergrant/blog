@@ -1,0 +1,7 @@
+{
+  "name": "inner-lab-api",
+  "version": "1.0.0",
+  "dependencies": {
+    "@google/generative-ai": "^0.14.1"
+  }
+}
