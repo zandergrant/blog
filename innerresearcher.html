@@ -107,6 +107,7 @@
 
             try {
                 // Call our Vercel serverless function
+                // Use relative path since this file is innerresearcher.html
                 const response = await fetch('/api/generate', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
