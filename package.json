@@ -1,0 +1,12 @@
+{
+  "name": "inner-lab",
+  "version": "1.0.0",
+  "description": "Daily AI-generated research papers for inner peace and psychology",
+  "main": "index.html",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0"
+  },
+  "scripts": {
+    "dev": "vercel dev"
+  }
+}
