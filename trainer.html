@@ -38,7 +38,7 @@
             padding: 20px;
         }
 
-        h1, h2 {
+        h1, h2, h3 {
             color: var(--primary-text);
         }
 
@@ -52,6 +52,13 @@
             font-size: 22px;
             font-weight: 600;
             margin-bottom: 16px;
+        }
+        
+        h3 {
+            font-size: 17px;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 8px;
         }
 
         .subtitle {
@@ -107,6 +114,28 @@
             background: var(--strava-orange);
             color: #fff;
         }
+        
+        .btn-arrow {
+            background: var(--card-hover);
+            border: 1px solid var(--border-color);
+            color: var(--secondary-text);
+            border-radius: 8px;
+            width: 44px;
+            height: 44px;
+            font-size: 24px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding-bottom: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-arrow:hover {
+            background: var(--border-color);
+        }
+
 
         .input {
             width: 100%;
@@ -219,7 +248,7 @@
             border-radius: 8px;
             border: 1px solid var(--input-border);
             font-size: 15px;
-            min-height: 60px;
+            min-height: 80px;
             resize: vertical;
             font-family: inherit;
             margin-top: 8px;
@@ -304,13 +333,14 @@
 
         .date-selector {
             display: flex;
+            align-items: center;
             gap: 8px;
             margin-bottom: 24px;
         }
 
         .date-selector input {
-            flex: 1;
-            max-width: 200px;
+           flex: 1;
+           text-align: center;
         }
 
         .template-actions {
@@ -404,8 +434,9 @@
                 </div>
 
                 <div class="date-selector">
+                    <button onclick="changeDate(-1)" class="btn-arrow">‹</button>
                     <input type="date" id="dateInput" class="input">
-                    <button onclick="loadWorkoutForDate()" class="btn btn-small">View</button>
+                    <button onclick="changeDate(1)" class="btn-arrow">›</button>
                 </div>
                 
                 <div id="workoutSelection">
@@ -442,8 +473,12 @@
                     <input type="text" id="templateNameInput" class="input" placeholder="Template Name">
                     <div id="templateExercisesList"></div>
                     <button onclick="addTemplateExercise()" class="btn btn-secondary" style="margin-bottom: 12px;">+ Add Exercise</button>
-                    <button onclick="saveTemplate()" class="btn">Save Template</button>
-                    <button onclick="deleteTemplate()" class="btn btn-danger" id="deleteTemplateBtn" style="margin-top: 12px;">Delete Template</button>
+                    <h3>Template Notes</h3>
+                    <textarea id="templateNotesInput" placeholder="Add default notes for this workout (e.g., focus on form, goals)."></textarea>
+                    <div style="margin-top: 20px;">
+                        <button onclick="saveTemplate()" class="btn">Save Template</button>
+                        <button onclick="deleteTemplate()" class="btn btn-danger" id="deleteTemplateBtn" style="margin-top: 12px;">Delete Template</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -625,6 +660,17 @@
             await loadProgressChart();
         };
 
+        window.changeDate = (days) => {
+            const dateInput = document.getElementById('dateInput');
+            const parts = dateInput.value.split('-').map(Number);
+            const currentDateUTC = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+            
+            currentDateUTC.setDate(currentDateUTC.getDate() + days);
+
+            dateInput.value = currentDateUTC.toISOString().split('T')[0];
+            loadWorkoutForDate();
+        };
+
         window.loadProgressChart = async () => {
             try {
                 const q = query(
@@ -748,7 +794,8 @@
                 athleteId: window.selectedAthlete.id,
                 date: document.getElementById('dateInput').value,
                 workoutName: '',
-                exercises: []
+                exercises: [],
+                workoutNotes: ''
             };
             renderEditableWorkoutLog();
         };
@@ -779,7 +826,8 @@
                     name: ex.name,
                     sets: ex.sets.map(s => ({...s, notes: ''})),
                     notes: ''
-                }))
+                })),
+                workoutNotes: template.workoutNotes || ''
             };
             renderEditableWorkoutLog();
         };
@@ -857,7 +905,13 @@
             card.innerHTML = `
                 <h2 style="font-size: 22px; font-weight: 600; margin-bottom: 16px;">${window.currentWorkoutLog.workoutName}</h2>
                 <div id="exercisesList">${exercisesHTML}</div>
-                <div id="workoutActionButtons">
+                ${window.currentWorkoutLog.workoutNotes ? `
+                    <div>
+                        <h3>Workout Notes</h3>
+                        <div style="padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--background); white-space: pre-wrap;">${window.currentWorkoutLog.workoutNotes}</div>
+                    </div>
+                ` : ''}
+                <div id="workoutActionButtons" style="margin-top: 20px;">
                     <button onclick="renderEditableWorkoutLog()" class="btn">Edit Workout</button>
                     <button onclick="clearWorkoutAndReturnToSelection()" class="btn btn-secondary" style="margin-top: 12px;">Log Different Workout</button>
                 </div>
@@ -873,7 +927,9 @@
             card.innerHTML = `
                 <input type="text" id="workoutNameInput" class="input" placeholder="Workout Name" style="font-size: 22px; font-weight: 600; margin-bottom: 16px;" value="${window.currentWorkoutLog.workoutName || ''}">
                 <div id="exercisesList"></div>
-                <div id="workoutActionButtons">
+                <h3>Workout Notes</h3>
+                <textarea id="workoutNotesInput" placeholder="How did the workout feel overall? Any PRs?">${window.currentWorkoutLog.workoutNotes || ''}</textarea>
+                <div id="workoutActionButtons" style="margin-top: 20px;">
                     <button onclick="addExercise()" class="btn btn-secondary" style="margin-bottom: 12px;">+ Add Exercise</button>
                     <button onclick="saveWorkout()" class="btn">Save Workout</button>
                     <button onclick="cancelEdit()" class="btn btn-secondary" style="margin-top: 12px;">Cancel</button>
@@ -970,6 +1026,7 @@
             }
 
             window.currentWorkoutLog.workoutName = workoutName;
+            window.currentWorkoutLog.workoutNotes = document.getElementById('workoutNotesInput').value;
             
             try {
                 if (window.currentWorkoutLog.id) {
@@ -1008,9 +1065,11 @@
         window.showAddTemplate = () => {
             window.currentTemplate = {
                 name: '',
-                exercises: []
+                exercises: [],
+                workoutNotes: ''
             };
             document.getElementById('templateNameInput').value = '';
+            document.getElementById('templateNotesInput').value = '';
             document.getElementById('templateEditorTitle').textContent = 'New Template';
             document.getElementById('deleteTemplateBtn').classList.add('hidden');
             renderTemplateEditor();
@@ -1024,6 +1083,7 @@
                 if (docSnap.exists()) {
                     window.currentTemplate = { id: templateId, ...docSnap.data() };
                     document.getElementById('templateNameInput').value = window.currentTemplate.name;
+                    document.getElementById('templateNotesInput').value = window.currentTemplate.workoutNotes || '';
                     document.getElementById('templateEditorTitle').textContent = 'Edit Template';
                     document.getElementById('deleteTemplateBtn').classList.remove('hidden');
                     renderTemplateEditor();
@@ -1120,6 +1180,7 @@
             }
 
             window.currentTemplate.name = templateName;
+            window.currentTemplate.workoutNotes = document.getElementById('templateNotesInput').value;
 
             try {
                 if (window.currentTemplate.id) {
@@ -1183,6 +1244,7 @@
                 const workoutSummary = workouts.map(w => ({
                     date: w.date,
                     workout: w.workoutName,
+                    notes: w.workoutNotes,
                     exercises: w.exercises.map(e => ({
                         name: e.name,
                         sets: e.sets,
@@ -1244,6 +1306,7 @@
                         userId: window.currentUser.uid,
                         date: dateString,
                         workoutName: 'Test Full Body Workout',
+                        workoutNotes: `This is test workout #${Math.round(i/3)}. Feeling strong today. Focus on depth.`,
                         exercises: [
                             {
                                 name: 'Squat',
@@ -1279,6 +1342,9 @@
             await window.loadProgressChart(); 
             await window.loadWorkoutForDate(); 
         };
+        
+        // Add event listener for the date picker to auto-load on change
+        document.getElementById('dateInput').addEventListener('change', loadWorkoutForDate);
 
     </script>
 </body>
