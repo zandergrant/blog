@@ -370,6 +370,7 @@
                 </div>
                 <p class="subtitle">Select an athlete to view workouts</p>
                 <button onclick="showAddAthlete()" class="btn btn-secondary" style="margin-bottom: 20px;">+ Add Athlete</button>
+                <button onclick="addTestData()" class="btn btn-secondary" style="margin-bottom: 20px;">+ Add Test Data</button>
                 <div id="athletesList"></div>
             </div>
         </div>
@@ -393,6 +394,7 @@
                 <div class="card">
                     <h2>Progress</h2>
                     <div class="chart-controls">
+                        <button onclick="updateChartRange('1')" id="btn1">1 Day</button>
                         <button onclick="updateChartRange('7')" class="active" id="btn7">7 Days</button>
                         <button onclick="updateChartRange('30')" id="btn30">30 Days</button>
                         <button onclick="updateChartRange('90')" id="btn90">90 Days</button>
@@ -641,9 +643,11 @@
                 });
 
                 // Filter by range
-                const now = new Date();
                 let filteredWorkouts = workouts;
-                if (window.chartRange !== 'all') {
+                if (window.chartRange === '1') {
+                    const selectedDate = document.getElementById('dateInput').value;
+                    filteredWorkouts = workouts.filter(w => w.date === selectedDate);
+                } else if (window.chartRange !== 'all') {
                     const daysAgo = new Date();
                     daysAgo.setDate(daysAgo.getDate() - parseInt(window.chartRange));
                     filteredWorkouts = workouts.filter(w => new Date(w.date) >= daysAgo);
@@ -1211,6 +1215,71 @@
                 reviewContent.innerHTML = `<p class="error">Error: ${error.message}</p>`;
             }
         };
+
+        window.addTestData = async () => {
+            if (!window.selectedAthlete) {
+                alert("Please select an athlete first!");
+                return;
+            }
+            if (!confirm(`This will add 30 new workout logs to ${window.selectedAthlete.name}. Are you sure?`)) {
+                return;
+            }
+
+            console.log("Generating test data for the last 90 days...");
+            const today = new Date();
+            let startingWeight = 135;
+
+            for (let i = 90; i >= 0; i--) {
+                // Add a workout roughly every 3 days
+                if (i % 3 === 0) {
+                    const date = new Date();
+                    date.setDate(today.getDate() - i);
+                    const dateString = date.toISOString().split('T')[0];
+
+                    // Increase weight over time to show progress
+                    startingWeight += 2.5;
+
+                    const testWorkout = {
+                        athleteId: window.selectedAthlete.id,
+                        userId: window.currentUser.uid,
+                        date: dateString,
+                        workoutName: 'Test Full Body Workout',
+                        exercises: [
+                            {
+                                name: 'Squat',
+                                notes: 'Test data squat',
+                                sets: [
+                                    { sets: 1, reps: 5, weight: Math.round(startingWeight / 5) * 5 }, // Round to nearest 5
+                                    { sets: 1, reps: 5, weight: Math.round(startingWeight / 5) * 5 },
+                                    { sets: 1, reps: 5, weight: Math.round(startingWeight / 5) * 5 }
+                                ]
+                            },
+                            {
+                                name: 'Bench Press',
+                                notes: 'Test data bench',
+                                sets: [
+                                    { sets: 1, reps: 8, weight: Math.round((startingWeight - 20) / 5) * 5 },
+                                    { sets: 1, reps: 8, weight: Math.round((startingWeight - 20) / 5) * 5 }
+                                ]
+                            }
+                        ],
+                        createdAt: new Date()
+                    };
+
+                    try {
+                        await addDoc(collection(window.db, 'workoutLogs'), testWorkout);
+                    } catch (error) {
+                        console.error("Error adding test document:", error);
+                        alert("An error occurred while adding test data. Check the console.");
+                        return; 
+                    }
+                }
+            }
+            alert("Test data generation complete! Refreshing the view...");
+            await window.loadProgressChart(); 
+            await window.loadWorkoutForDate(); 
+        };
+
     </script>
 </body>
 </html>
